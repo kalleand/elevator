@@ -77,6 +77,7 @@ main(int argc, char **argv)
   }
   (void) pthread_join(ctlThr, NULL);
   (void) pthread_join(evThr, NULL);
+  return 0;
 }
 
 void *ctlProc(void *p)
