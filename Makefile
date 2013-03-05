@@ -6,6 +6,8 @@ CFLAGS=-pthread
 
 OFILES=hardwareAPI.o monitor.o elevator.o command.o
 
+all: default
+
 default: run
 
 hardwareAPI.o: hardwareAPI.c hardwareAPI.h
