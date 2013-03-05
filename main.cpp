@@ -56,10 +56,14 @@ int main(int argc, char ** argv)
     pthread_mutex_init(&mutex, nullptr);
 
     char * number_of_elevators_char = getenv("NUMBER_OF_ELEVATORS");
-    int number_of_elevators = atoi(number_of_elevators_char);
-    if (number_of_elevators == 0)
+    int number_of_elevators = NUMBER_OF_ELEVATORS;
+    if (number_of_elevators_char != nullptr)
     {
-        number_of_elevators = NUMBER_OF_ELEVATORS;
+        number_of_elevators = atoi(number_of_elevators_char);
+        if (number_of_elevators == 0)
+        {
+            number_of_elevators = NUMBER_OF_ELEVATORS;
+        }
     }
     elevators.resize(number_of_elevators + 1);
 
