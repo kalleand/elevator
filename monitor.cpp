@@ -80,3 +80,10 @@ void monitor::floor_button(command command)
         }
     }
 }
+void monitor::run_elevator(int which_elevator)
+{
+    pthread_mutex_lock(&monitor_lock);
+    elevator elevator_to_run = elevators[which_elevator];
+
+    pthread_mutex_unlock(&monitor_lock);
+}

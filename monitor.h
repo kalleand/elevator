@@ -26,6 +26,8 @@ class monitor
         void cabin_button(command command);
 
         void floor_button(command command);
+
+        void run_elevator(int elevator);
     private:
         // PLEASE NOTE THAT WE DO NOT USE ELEVATOR 0!
         std::vector<elevator> elevators;
