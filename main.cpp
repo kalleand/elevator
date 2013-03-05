@@ -14,6 +14,7 @@ void * handle_elevator(void *);
 
 // PLEASE NOTE THAT WE DO NOT USE ELEVATOR 0!
 elevator elevators[NUMBER_OF_ELEVATORS + 1];
+pthread_mutex_t mutex;
 
 int main(int argc, char ** argv)
 {
@@ -46,6 +47,10 @@ int main(int argc, char ** argv)
         }
     }
 
+    pthread_t threads[NUMBER_OF_ELEVATORS + 1];
+
+    // Initialize the mutex.
+    pthread_mutex_init(&mutex, nullptr);
     // Initialize the connection.
     initHW(hostname.c_str(), port);
 
@@ -57,7 +62,86 @@ int main(int argc, char ** argv)
     sleep(3);
     */
 
+
+    // Create listening thread.
+    pthread_create(&threads[0], nullptr, read_thread, nullptr);
+
+    // Create elevator handles.
+    for(long i = 1; i < NUMBER_OF_ELEVATORS + 1; ++i)
+    {
+        pthread_create(&threads[i], nullptr, handle_elevator, (void *) i);
+    }
+
+    // Join them again
+    for(int i = 0; i < NUMBER_OF_ELEVATORS + 1; ++i)
+    {
+        pthread_join(threads[i], nullptr);
+    }
+
     std::cout << "Hejsan!" << std::endl;
     terminate();
     return 0;
+}
+
+void * read_thread(void * input)
+{
+    EventType e;
+    EventDesc ed;
+
+    int i = 0;
+
+    while (1 && i < 5) {
+        e = waitForEvent(&ed);
+
+        i++;
+        switch (e) {
+            case FloorButton:
+                pthread_mutex_lock(&mutex);
+                fprintf(stdout, "floor button: floor %d, type %d\n",
+                        ed.fbp.floor, (int) ed.fbp.type);
+                fflush(stdout);
+                pthread_mutex_unlock(&mutex);
+                break;
+
+            case CabinButton:
+                pthread_mutex_lock(&mutex);
+                fprintf(stdout, "cabin button: cabin %d, floor %d\n",
+                        ed.cbp.cabin, ed.cbp.floor);
+                fflush(stdout);
+                pthread_mutex_unlock(&mutex);
+                break;
+
+            case Position:
+                pthread_mutex_lock(&mutex);
+                fprintf(stdout, "cabin position: cabin %d, position %f\n",
+                        ed.cp.cabin, ed.cp.position);
+                fflush(stdout);
+                pthread_mutex_unlock(&mutex);
+                break;
+
+            case Speed:
+                pthread_mutex_lock(&mutex);
+                fprintf(stdout, "speed: %f\n", ed.s.speed);
+                fflush(stdout);
+                pthread_mutex_unlock(&mutex);
+                break;
+
+            case Error:
+                pthread_mutex_lock(&mutex);
+                fprintf(stdout, "error: \"%s\"\n", ed.e.str);
+                fflush(stdout);
+                pthread_mutex_unlock(&mutex);
+                break;
+        }
+    }
+    pthread_exit(nullptr);
+}
+
+void * handle_elevator(void * input)
+{
+    long elevator_number = (long) input;
+    pthread_mutex_lock(&mutex);
+    std::cout << "We handle elevator number " << elevator_number << std::endl;
+    pthread_mutex_unlock(&mutex);
+    pthread_exit(nullptr);
 }
