@@ -1,6 +1,5 @@
 .PHONY: run, clean, elevator
 
-CC=gcc
 CPP=g++ -std=c++0x -Wall
 CFLAGS=-pthread
 
@@ -17,7 +16,7 @@ hardwareAPI.o: hardwareAPI.c hardwareAPI.h
 	$(CPP) -c $<
 
 test-hwAPI.out: test-hwAPI.c $(OFILES)
-	$(CC) -o $@ $< $(OFILES) $(CFLAGS)
+	$(CPP) -o $@ $< $(OFILES) $(CFLAGS)
 
 %.out: %.cpp $(OFILES)
 	$(CPP) -o $@ $< $(OFILES) $(CFLAGS)

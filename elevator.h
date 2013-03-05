@@ -3,12 +3,14 @@
 
 #include <vector>
 #include "hardwareAPI.h"
+#include "command.h"
 
 class elevator
 {
     public:
         int number;
         double position;
+        std::vector<command> unhandled_commands;
 };
 
 #endif
