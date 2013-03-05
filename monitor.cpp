@@ -125,8 +125,58 @@ void monitor::floor_button(command command)
 }
 void monitor::run_elevator(int which_elevator)
 {
-    pthread_mutex_lock(&monitor_lock);
-    elevator elevator_to_run = elevators[which_elevator];
+    pthread_mutex_lock(&elevator_locks[which_elevator]);
 
-    pthread_mutex_unlock(&monitor_lock);
+    std::cout << "We handle elevator number " << which_elevator << std::endl;
+    elevator & elevator_to_run = elevators[which_elevator];
+
+    /* Parse commands */
+
+    /* Check next target */
+    int target = 10;
+
+    double diff = target - elevator_to_run.position;
+    if (abs(diff) < 0.0000001)
+    {
+        handleMotor(which_elevator, MotorStop);
+        handleDoor(which_elevator, DoorOpen);
+        elevator_to_run.direction = 0;
+    }
+    if ((diff < 0 && elevator_to_run.direction > 0) || (diff > 0 && elevator_to_run.direction > 0))
+    {
+        handleDoor(which_elevator, DoorClose);
+        if (diff < 0)
+        {
+            handleMotor(which_elevator, MotorDown);
+            elevator_to_run.direction = -1;
+        }
+        else
+        {
+            handleMotor(which_elevator, MotorUp);
+            elevator_to_run.direction = 1;
+        }
+    }
+
+/*    auto element = elevator_to_run.unhandled_commands.begin();
+    if (element != elevator_to_run.unhandled_commands.end())
+    {
+        command cmd = *element;
+        elevator_to_run.unhandled_commands.erase(element);
+        if (cmd.type == CabinButton)
+        {
+            if (cmd.desc.cbp.floor == elevator_to_run.position)
+            {
+                if (elevator_to_run.direction != 0)
+                    handleMotor(which_elevator, MotorStop);
+                handleDoor(which_elevator, DoorOpen);
+            }
+            else
+            {
+                if (c)
+            }
+        }
+    }*/
+//    handleMotor(elevator_number, MotorUp);
+
+    pthread_mutex_unlock(&elevator_locks[which_elevator]);
 }
