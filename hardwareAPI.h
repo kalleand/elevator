@@ -15,7 +15,7 @@
 //
 // Init procedure, which establishes the channel.
 // The same socket is used for both directions.
-void initHW(char *hostname, int port);
+void initHW(const char *hostname, int port);
 
 //
 typedef enum {
