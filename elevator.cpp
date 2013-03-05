@@ -14,6 +14,7 @@ elevator::elevator(const elevator & source) : number(source.number), position(so
 
 elevator::elevator(elevator && source) : number(source.number), position(source.position), direction(source.direction), unhandled_commands(source.unhandled_commands)
 {
+    source.unhandled_commands.clear();
 }
 
 elevator::~elevator()
@@ -22,18 +23,25 @@ elevator::~elevator()
 
 elevator & elevator::operator=(const elevator & source)
 {
-    number = source.number;
-    position = source.position;
-    direction = source.direction;
-    unhandled_commands = source.unhandled_commands;
+    if(this != &source) 
+    {
+        number = source.number;
+        position = source.position;
+        direction = source.direction;
+        unhandled_commands = source.unhandled_commands;
+    }
     return *this;
 }
 
 elevator & elevator::operator=(elevator && source)
 {
-    number = source.number;
-    position = source.position;
-    direction = source.direction;
-    unhandled_commands = source.unhandled_commands;
+    if(this != &source)
+    {
+        number = source.number;
+        position = source.position;
+        direction = source.direction;
+        unhandled_commands = source.unhandled_commands;
+        source.unhandled_commands.clear();
+    }
     return *this;
 }
