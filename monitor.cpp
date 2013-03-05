@@ -127,33 +127,35 @@ void monitor::run_elevator(int which_elevator)
 {
     pthread_mutex_lock(&elevator_locks[which_elevator]);
 
-    std::cout << "We handle elevator number " << which_elevator << std::endl;
+//    std::cout << "We handle elevator number " << which_elevator << std::endl;
     elevator & elevator_to_run = elevators[which_elevator];
 
     /* Parse commands */
 
     /* Check next target */
-    int target = 10;
+    double target = 2.0;
 
     double diff = target - elevator_to_run.position;
-    if (abs(diff) < 0.0000001)
+    if (std::abs(diff) < 0.0000001)
     {
         handleMotor(which_elevator, MotorStop);
         handleDoor(which_elevator, DoorOpen);
-        elevator_to_run.direction = 0;
+        elevator_to_run.direction = MotorStop;
     }
-    if ((diff < 0 && elevator_to_run.direction > 0) || (diff > 0 && elevator_to_run.direction > 0))
+    if ((diff < 0 && elevator_to_run.direction != MotorDown) || (diff > 0 && elevator_to_run.direction != MotorUp))
     {
-        handleDoor(which_elevator, DoorClose);
+        if (elevator_to_run.direction == MotorStop)
+            handleDoor(which_elevator, DoorClose);
+        sleep(3);
         if (diff < 0)
         {
             handleMotor(which_elevator, MotorDown);
-            elevator_to_run.direction = -1;
+            elevator_to_run.direction = MotorDown;
         }
         else
         {
             handleMotor(which_elevator, MotorUp);
-            elevator_to_run.direction = 1;
+            elevator_to_run.direction = MotorUp;
         }
     }
 

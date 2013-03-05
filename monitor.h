@@ -6,7 +6,8 @@
 #include "hardwareAPI.h"
 #include "command.h"
 #include "elevator.h"
-#include <cstdlib>
+#include <cmath>
+#include <unistd.h>
 #include <pthread.h>
 
 #define EMERGENCY_STOP 32000
