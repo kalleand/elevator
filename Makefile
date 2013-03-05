@@ -1,5 +1,12 @@
 .PHONY: run, clean, elevator
 
+ifndef ELEVATORS
+ELEVATORS=3
+endif
+ifndef FLOORS
+FLOORS=5
+endif
+
 CPP=g++ -std=c++0x -Wall
 CFLAGS=-pthread
 
@@ -22,13 +29,13 @@ test-hwAPI.out: test-hwAPI.c $(OFILES)
 	$(CPP) -o $@ $< $(OFILES) $(CFLAGS)
 
 run: main.out
-	./$< 127.0.0.1 4711
+	export NUMBER_OF_ELEVATORS=$(ELEVATORS)  && ./$< 127.0.0.1 4711
 
 runtest: test-hwAPI.out
 	./$< 127.0.0.1 4711
 
 elevator:
-	java -classpath elevator/classes elevator.Elevators -number 1 -top 5 -tcp
+	java -classpath elevator/classes elevator.Elevators -number $(ELEVATORS) -top $(FLOORS) -tcp
 
 clean:
 	rm -f *.out

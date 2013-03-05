@@ -5,6 +5,8 @@
 #include <vector>
 #include "hardwareAPI.h"
 #include "elevator.h"
+#include "monitor.h"
+#include "command.h"
 
 #ifndef NUMBER_OF_ELEVATORS
 #define NUMBER_OF_ELEVATORS 3
@@ -12,6 +14,8 @@
 
 void * read_thread(void *);
 void * handle_elevator(void *);
+
+monitor * mon;
 
 pthread_mutex_t mutex;
 
@@ -49,6 +53,8 @@ int main(int argc, char ** argv)
         }
     }
 
+    mon = new monitor();
+
     // The threads used in this simulation.
     pthread_t threads[NUMBER_OF_ELEVATORS + 1];
 
@@ -65,6 +71,7 @@ int main(int argc, char ** argv)
             number_of_elevators = NUMBER_OF_ELEVATORS;
         }
     }
+    std::cout << number_of_elevators << std::endl;
     elevators.resize(number_of_elevators + 1);
 
     // Initialize the connection.
@@ -85,6 +92,8 @@ int main(int argc, char ** argv)
         pthread_join(threads[i], nullptr);
     }
 
+    delete mon;
+
     std::cout << "Hejsan!" << std::endl;
     terminate();
     return 0;
@@ -100,6 +109,9 @@ void * read_thread(void * input)
     while (1 && i < 5) {
         e = waitForEvent(&ed);
 
+        command tmp;
+        tmp.type=e;
+        tmp.desc=ed;
         i++;
         switch (e) {
             case FloorButton:
@@ -115,6 +127,7 @@ void * read_thread(void * input)
                 fprintf(stdout, "cabin button: cabin %d, floor %d\n",
                         ed.cbp.cabin, ed.cbp.floor);
                 fflush(stdout);
+
                 pthread_mutex_unlock(&mutex);
                 break;
 
