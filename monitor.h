@@ -2,6 +2,7 @@
 #define __ELEVATOR_MONITOR
 
 #include <vector>
+#include <iostream>
 #include "hardwareAPI.h"
 #include "command.h"
 #include "elevator.h"

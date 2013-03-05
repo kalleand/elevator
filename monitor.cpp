@@ -2,8 +2,8 @@
 
 monitor::monitor(int number_of_elevators) : elevators(number_of_elevators), elevator_locks(number_of_elevators)
 {
-    int i = 1;
-    for(auto it = elevators.begin() + 1; it != elevators.end(); ++it)
+    int i = 0;
+    for(auto it = elevators.begin(); it != elevators.end(); ++it)
     {
         it->number = i;
         i++;
@@ -77,6 +77,7 @@ void monitor::floor_button(command command)
     {
         if(it->direction == MotorStop)
         {
+            std::cout << "Hej" << std::endl;
             double tmp_dist = std::abs( (int)(it->position - command.desc.fbp.floor));
             if(distance > tmp_dist)
             {
@@ -112,7 +113,9 @@ void monitor::floor_button(command command)
     }
     if(best_elevator != -1)
     {
+        pthread_mutex_lock(&elevator_locks[best_elevator]);
         elevators[best_elevator].unhandled_commands.push_back(command);
+        pthread_mutex_unlock(&elevator_locks[best_elevator]);
     }
     else
     {

@@ -68,7 +68,7 @@ int main(int argc, char ** argv)
             number_of_elevators = NUMBER_OF_ELEVATORS;
         }
     }
-    mon = new monitor(number_of_elevators);
+    mon = new monitor(number_of_elevators + 1);
 
     // Initialize the connection.
     initHW(hostname.c_str(), port);
@@ -118,6 +118,7 @@ void * read_thread(void * input)
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
                 // Alert that the one floor button has been pressed.
+                mon->floor_button(tmp);
                 break;
 
             case CabinButton:
@@ -127,6 +128,7 @@ void * read_thread(void * input)
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
                 // Alert the monitor that a cabin button has been pressed.
+                mon->cabin_button(tmp);
                 break;
 
             case Position:
@@ -136,6 +138,7 @@ void * read_thread(void * input)
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
                 // Update the elevator position.
+                mon->update_position(ed.cp.cabin, ed.cp.position);
                 break;
 
             case Speed:

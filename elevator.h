@@ -10,7 +10,7 @@ class elevator
     public:
         elevator();
         explicit elevator(int number);
-        explicit elevator(const elevator & source);
+        elevator(const elevator & source);
         elevator(elevator && source);
         ~elevator();
 
