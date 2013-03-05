@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <vector>
 #include "hardwareAPI.h"
 #include "elevator.h"
 
@@ -13,7 +14,7 @@ void * read_thread(void *);
 void * handle_elevator(void *);
 
 // PLEASE NOTE THAT WE DO NOT USE ELEVATOR 0!
-elevator elevators[NUMBER_OF_ELEVATORS + 1];
+std::vector<elevator> elevators;
 
 int main(int argc, char ** argv)
 {
@@ -45,6 +46,14 @@ int main(int argc, char ** argv)
             port = tmp_port;
         }
     }
+
+    char * number_of_elevators_char = getenv("NUMBER_OF_ELEVATORS");
+    int number_of_elevators = atoi(number_of_elevators_char);
+    if (number_of_elevators == 0)
+    {
+        number_of_elevators = NUMBER_OF_ELEVATORS;
+    }
+    elevators.resize(number_of_elevators + 1);
 
     // Initialize the connection.
     initHW(hostname.c_str(), port);
