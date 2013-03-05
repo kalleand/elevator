@@ -22,6 +22,8 @@ pthread_mutex_t mutex;
 // PLEASE NOTE THAT WE DO NOT USE ELEVATOR 0!
 std::vector<elevator> elevators;
 
+bool done = false;
+
 int main(int argc, char ** argv)
 {
     if (argc > 3) {
@@ -86,6 +88,9 @@ int main(int argc, char ** argv)
         pthread_create(&threads[i], nullptr, handle_elevator, (void *) i);
     }
 
+    getchar();
+    done = true;
+
     // Join them again
     for(int i = 0; i < number_of_elevators + 1; ++i)
     {
@@ -106,7 +111,7 @@ void * read_thread(void * input)
 
     int i = 0;
 
-    while (1 && i < 5) {
+    while (!done) {
         e = waitForEvent(&ed);
 
         command tmp;
