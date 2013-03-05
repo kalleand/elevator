@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <vector>
 #include "hardwareAPI.h"
 #include "elevator.h"
 
@@ -12,9 +13,10 @@
 void * read_thread(void *);
 void * handle_elevator(void *);
 
-// PLEASE NOTE THAT WE DO NOT USE ELEVATOR 0!
-elevator elevators[NUMBER_OF_ELEVATORS + 1];
 pthread_mutex_t mutex;
+
+// PLEASE NOTE THAT WE DO NOT USE ELEVATOR 0!
+std::vector<elevator> elevators;
 
 int main(int argc, char ** argv)
 {
@@ -47,33 +49,34 @@ int main(int argc, char ** argv)
         }
     }
 
+    // The threads used in this simulation.
     pthread_t threads[NUMBER_OF_ELEVATORS + 1];
 
     // Initialize the mutex.
     pthread_mutex_init(&mutex, nullptr);
+
+    char * number_of_elevators_char = getenv("NUMBER_OF_ELEVATORS");
+    int number_of_elevators = atoi(number_of_elevators_char);
+    if (number_of_elevators == 0)
+    {
+        number_of_elevators = NUMBER_OF_ELEVATORS;
+    }
+    elevators.resize(number_of_elevators + 1);
+
     // Initialize the connection.
     initHW(hostname.c_str(), port);
-
-    /* Warmup! :>
-    sleep(3);
-    handleDoor(0, DoorOpen);
-    sleep(3);
-    handleDoor(0, DoorClose);
-    sleep(3);
-    */
-
 
     // Create listening thread.
     pthread_create(&threads[0], nullptr, read_thread, nullptr);
 
     // Create elevator handles.
-    for(long i = 1; i < NUMBER_OF_ELEVATORS + 1; ++i)
+    for(long i = 1; i < number_of_elevators + 1; ++i)
     {
         pthread_create(&threads[i], nullptr, handle_elevator, (void *) i);
     }
 
     // Join them again
-    for(int i = 0; i < NUMBER_OF_ELEVATORS + 1; ++i)
+    for(int i = 0; i < number_of_elevators + 1; ++i)
     {
         pthread_join(threads[i], nullptr);
     }
