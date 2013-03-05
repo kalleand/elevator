@@ -12,4 +12,11 @@
 *.la
 *.a
 
+# Compiled Programs
+*.out
+
+# Eclipse project files
+.cproject
+.project
+
 elevator
