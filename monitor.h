@@ -11,6 +11,9 @@ class monitor
         monitor & operator=(const monitor & source);
 
         // We need to read position
-        set_position(int elevator, double position);
+        void update_position(int elevator, double position);
+        // Additional functions..
+        // TODO
     private:
 };
+#endif

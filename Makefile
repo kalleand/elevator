@@ -1,15 +1,15 @@
 .PHONY: run, clean, elevator
 
 CC=gcc
-CPP=g++
+CPP=g++ -std=c++0x -Wall
 CFLAGS=-pthread
 
-OFILES=hardwareAPI.o
+OFILES=hardwareAPI.o monitor.o elevator.o command.o
 
 default: run
 
 hardwareAPI.o: hardwareAPI.c hardwareAPI.h
-	$(CC) -c $<
+	$(CPP) -c $<
 
 %.o: %.cpp %.h
 	$(CPP) -c $<
