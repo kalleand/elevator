@@ -2,7 +2,7 @@
 
 CC=gcc
 CPP=g++
-CFLAGS=-L /usr/lib/happycoders -lsocket -lpthread -lnsl
+CFLAGS=-pthread
 
 OFILES=hardwareAPI.o
 

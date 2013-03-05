@@ -37,7 +37,7 @@ typedef struct {
 } FloorButtonPressDesc;
 typedef struct {
   int cabin;
-  int floor;			// or 32000 for emergency stop
+  int floor;            // or 32000 for emergency stop
 } CabinButtonPressDesc;
 typedef struct {
   int cabin;
