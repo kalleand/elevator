@@ -160,9 +160,9 @@ void * read_thread(void * input)
 void * handle_elevator(void * input)
 {
     long elevator_number = (long) input;
-    pthread_mutex_lock(&mutex);
-    std::cout << "We handle elevator number " << elevator_number << std::endl;
-    handleMotor(elevator_number, MotorUp);
-    pthread_mutex_unlock(&mutex);
+//    std::cout << "We handle elevator number " << elevator_number << std::endl;
+    while (!done)
+        mon->run_elevator((int) elevator_number);
+//    handleMotor(elevator_number, MotorUp);
     pthread_exit(nullptr);
 }
