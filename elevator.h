@@ -8,8 +8,18 @@
 class elevator
 {
     public:
+        elevator();
+        explicit elevator(int number);
+        explicit elevator(const elevator & source);
+        elevator(elevator && source);
+        ~elevator();
+
+        elevator & operator=(const elevator & source);
+        elevator & operator=(elevator && source);
+
         int number;
         double position;
+        // Should be MotorUp/MotorDown/MotorStop
         int direction;
         std::vector<command> unhandled_commands;
 };

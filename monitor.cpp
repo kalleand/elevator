@@ -2,6 +2,12 @@
 
 monitor::monitor(int number_of_elevators) : elevators(number_of_elevators), elevator_locks(number_of_elevators)
 {
+    int i = 1;
+    for(auto it = elevators.begin() + 1; it != elevators.end(); ++it)
+    {
+        it->number = i;
+        i++;
+    }
     pthread_mutex_init(&monitor_lock, nullptr);
     pthread_cond_init(&monitor_cond_var, nullptr);
     for (auto it = elevator_locks.begin(), end = elevator_locks.end(); it != end; ++it)
@@ -69,14 +75,48 @@ void monitor::floor_button(command command)
     double distance = 9999;
     for(auto it = elevators.begin() + 1; it != elevators.end(); ++it)
     {
-        if(it->direction == 0)
+        if(it->direction == MotorStop)
         {
             double tmp_dist = std::abs( (int)(it->position - command.desc.fbp.floor));
             if(distance > tmp_dist)
             {
                 distance = tmp_dist;
                 best_elevator = it->number;
+                if(tmp_dist == 0) // We found a perfect elevator.
+                {
+                    break;
+                }
             }
         }
+        else
+        {
+            int tmp_dir = 0;
+            if(command.desc.fbp.floor - it->position > 0)
+                tmp_dir = MotorUp;
+            else
+                tmp_dir = MotorDown;
+
+            if(tmp_dir == it->direction)
+            {
+                double tmp_dist = std::abs( (int)(it->position - command.desc.fbp.floor));
+                if(distance > tmp_dist)
+                {
+                    if(tmp_dist != 0)
+                    {
+                        distance = tmp_dist;
+                        best_elevator = it->number;
+                    }
+                }
+            }
+        }
+    }
+    if(best_elevator != -1)
+    {
+        elevators[best_elevator].unhandled_commands.push_back(command);
+    }
+    else
+    {
+        // TODO
+        // Handle this button press, seeing as no elevator has been asigned to it.
     }
 }
