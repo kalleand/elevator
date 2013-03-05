@@ -109,15 +109,13 @@ void * read_thread(void * input)
     EventType e;
     EventDesc ed;
 
-    int i = 0;
-
     while (!done) {
         e = waitForEvent(&ed);
 
         command tmp;
         tmp.type=e;
         tmp.desc=ed;
-        i++;
+
         switch (e) {
             case FloorButton:
                 pthread_mutex_lock(&mutex);
@@ -125,6 +123,7 @@ void * read_thread(void * input)
                         ed.fbp.floor, (int) ed.fbp.type);
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
+                // Alert that the one floor button has been pressed.
                 break;
 
             case CabinButton:
@@ -132,8 +131,8 @@ void * read_thread(void * input)
                 fprintf(stdout, "cabin button: cabin %d, floor %d\n",
                         ed.cbp.cabin, ed.cbp.floor);
                 fflush(stdout);
-
                 pthread_mutex_unlock(&mutex);
+                // Alert the monitor that a cabin button has been pressed.
                 break;
 
             case Position:
@@ -142,6 +141,7 @@ void * read_thread(void * input)
                         ed.cp.cabin, ed.cp.position);
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
+                // Update the elevator position.
                 break;
 
             case Speed:
@@ -149,6 +149,7 @@ void * read_thread(void * input)
                 fprintf(stdout, "speed: %f\n", ed.s.speed);
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
+                // Update Speed. (Should we care about this?)
                 break;
 
             case Error:
@@ -167,6 +168,7 @@ void * handle_elevator(void * input)
     long elevator_number = (long) input;
     pthread_mutex_lock(&mutex);
     std::cout << "We handle elevator number " << elevator_number << std::endl;
+    handleMotor(elevator_number, MotorUp);
     pthread_mutex_unlock(&mutex);
     pthread_exit(nullptr);
 }
