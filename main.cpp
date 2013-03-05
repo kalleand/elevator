@@ -19,9 +19,6 @@ monitor * mon;
 
 pthread_mutex_t mutex;
 
-// PLEASE NOTE THAT WE DO NOT USE ELEVATOR 0!
-std::vector<elevator> elevators;
-
 bool done = false;
 
 int main(int argc, char ** argv)
@@ -55,8 +52,6 @@ int main(int argc, char ** argv)
         }
     }
 
-    mon = new monitor();
-
     // The threads used in this simulation.
     pthread_t threads[NUMBER_OF_ELEVATORS + 1];
 
@@ -73,8 +68,7 @@ int main(int argc, char ** argv)
             number_of_elevators = NUMBER_OF_ELEVATORS;
         }
     }
-    std::cout << number_of_elevators << std::endl;
-    elevators.resize(number_of_elevators + 1);
+    mon = new monitor(number_of_elevators);
 
     // Initialize the connection.
     initHW(hostname.c_str(), port);
