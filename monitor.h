@@ -3,6 +3,9 @@
 
 #include <vector>
 #include "hardwareAPI.h"
+#include "command.h"
+#include "elevator.h"
+#include <cstdlib>
 
 #define EMERGENCY_STOP 32000
 

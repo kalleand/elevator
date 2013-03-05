@@ -10,6 +10,7 @@ class elevator
     public:
         int number;
         double position;
+        int direction;
         std::vector<command> unhandled_commands;
 };
 
