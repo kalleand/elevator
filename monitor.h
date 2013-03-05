@@ -6,6 +6,7 @@
 #include "command.h"
 #include "elevator.h"
 #include <cstdlib>
+#include <pthread.h>
 
 #define EMERGENCY_STOP 32000
 
@@ -28,5 +29,8 @@ class monitor
     private:
         // PLEASE NOTE THAT WE DO NOT USE ELEVATOR 0!
         std::vector<elevator> elevators;
+        std::vector<pthread_mutex_t> elevator_locks;
+        pthread_mutex_t monitor_lock;
+        pthread_cond_t monitor_cond_var;
 };
 #endif
