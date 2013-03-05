@@ -58,7 +58,7 @@ static int freeSpace;		// (for convenience;)
 #endif
 
 //
-void initHW(char *hostname, int port)
+void initHW(const char *hostname, int port)
 {
     struct sockaddr_in s;
     struct hostent *q;
