@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "hardwareAPI.h"
+#include <pthread.h>
 
 #define EMERGENCY_STOP 32000
 
@@ -25,5 +26,6 @@ class monitor
     private:
         // PLEASE NOTE THAT WE DO NOT USE ELEVATOR 0!
         std::vector<elevator> elevators;
+        std::vector<pthread_mutex_t> elevator_locks;
 };
 #endif
