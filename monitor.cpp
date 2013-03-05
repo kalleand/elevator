@@ -54,7 +54,9 @@ monitor & monitor::operator=(monitor && source)
 
 void monitor::update_position(int elevator, double position)
 {
+    pthread_mutex_lock(&elevator_locks[elevator]);
     elevators[elevator].position = position;
+    pthread_mutex_unlock(&elevator_locks[elevator]);
 }
 
 void monitor::cabin_button(command command)
@@ -78,7 +80,7 @@ void monitor::floor_button(command command)
         if(it->direction == MotorStop)
         {
             std::cout << "Hej" << std::endl;
-            double tmp_dist = std::abs( (int)(it->position - command.desc.fbp.floor));
+            double tmp_dist = std::abs(it->position - command.desc.fbp.floor);
             if(distance > tmp_dist)
             {
                 distance = tmp_dist;
@@ -99,7 +101,7 @@ void monitor::floor_button(command command)
 
             if(tmp_dir == it->direction)
             {
-                double tmp_dist = std::abs( (int)(it->position - command.desc.fbp.floor));
+                double tmp_dist = std::abs(it->position - command.desc.fbp.floor);
                 if(distance > tmp_dist)
                 {
                     if(tmp_dist != 0)

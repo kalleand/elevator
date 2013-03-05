@@ -7,6 +7,7 @@
 #include "command.h"
 #include "elevator.h"
 #include <cstdlib>
+#include <cmath>
 #include <pthread.h>
 
 #define EMERGENCY_STOP 32000
