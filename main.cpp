@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <assert.h>
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
@@ -16,7 +17,6 @@
 void * read_thread(void *);
 void * handle_elevator(void *);
 void schedule_floor_button_press(command cmd);
-void schedule_cabin_button_press(command cmd);
 
 std::vector<elevator> elevators;
 std::vector<double> * position_updates;
@@ -145,7 +145,7 @@ void * read_thread(void * input)
                         ed.cbp.cabin, ed.cbp.floor);
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
-                schedule_cabin_button_press(tmp);
+                elevators[tmp.desc.cbp.cabin].add_command(tmp);
                 break;
 
             case Position:
@@ -187,6 +187,7 @@ void * handle_elevator(void * input)
         pthread_mutex_lock(&position_updates_locks[elevator_number]);
         if (position_updates[elevator_number].size() > 0)
         {
+            assert(position_updates[elevator_number].size() == 1);
             for (auto it = position_updates[elevator_number].begin(), end = position_updates[elevator_number].end(); it != end; ++it)
             {
                 elevators[elevator_number].set_position(*it);
@@ -201,14 +202,33 @@ void * handle_elevator(void * input)
 
 void schedule_floor_button_press(command cmd)
 {
-    std::vector<int> possible_elevators;
-    for (auto it = elevators.begin() + 1, end = elevators.end(); it != end; ++it)
+    FloorButtonPressDesc button = cmd.desc.fbp;
+    std::vector<elevator *> possible_elevators;
+    for (unsigned int i = 1; i < elevators.size(); ++i)
     {
+        elevator & el = elevators[i];
+        // Find idle elevators
+        if (el.get_direction() == MotorStop && el.get_extreme_target() == el.get_scale())
+        {
+            possible_elevators.push_back(&el);
+        }
+        // Find elevators going in the right direction
+        else if (button.type == GoingUp && el.get_direction() != MotorDown && button.floor <= el.get_extreme_target())
+        {
+            possible_elevators.push_back(&el);
+        }
+        else if (button.type == GoingDown && el.get_direction() != MotorUp && button.floor >= el.get_extreme_target())
+        {
+            possible_elevators.push_back(&el);
+        }
     }
-    elevators[1].add_command(cmd);
-}
+/*    std::sort(possible_elevators.begin(), possible_elevators.end(), [&] (elevator * const e1, elevator * const e2)
+            {
+                if (e1->get_direction() == MotorStop)
+                {
 
-void schedule_cabin_button_press(command cmd)
-{
+                }
+                return true;
+            });*/
     elevators[1].add_command(cmd);
 }
