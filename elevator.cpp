@@ -157,7 +157,11 @@ int elevator::get_scale()
 int elevator::get_extreme_target()
 {
     pthread_mutex_lock(&_mon_lock);
-    int ret_target = _targets.back();
+    int ret_target;
+    if(_targets.size() > 0)
+        ret_target = _targets.back();
+    else
+        ret_target = _current_target;
     pthread_mutex_unlock(&_mon_lock);
     return ret_target;
 }
