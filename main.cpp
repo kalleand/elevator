@@ -17,7 +17,7 @@ void * handle_elevator(void *);
 
 std::vector<elevator> elevators;
 std::vector<double> * position_updates;
-std::vector<pthread_mutex_t> position_updates_locks;
+pthread_mutex_t * position_updates_locks;
 socket_monitor * mon;
 
 pthread_mutex_t mutex;
@@ -79,11 +79,11 @@ int main(int argc, char ** argv)
         elevators.push_back(elevator(i, mon));
     }
 
-    position_updates = new std::vector<double>[number_of_elevators];
-    position_updates_locks.resize(number_of_elevators + 1);
-    for (auto it = position_updates_locks.begin() + 1, end = position_updates_locks.end(); it != end; ++it)
+    position_updates = new std::vector<double>[number_of_elevators + 1];
+    position_updates_locks = new pthread_mutex_t[number_of_elevators + 1];
+    for (int i = 1; i < number_of_elevators + 1; ++i)
     {
-        pthread_mutex_init(&(*it), nullptr);
+        pthread_mutex_init(&position_updates_locks[i], nullptr);
     }
 
     // Initialize the connection.
