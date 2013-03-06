@@ -196,13 +196,13 @@ void elevator::run_elevator()
         }
         else if (cmd.type == CabinButton)
         {
-            if(std::find(_targets.begin(), _targets.end(), cmd.desc.fbp.floor) == _targets.end() && cmd.desc.fbp.floor != _current_target)
+            if(std::find(_targets.begin(), _targets.end(), cmd.desc.cbp.floor) == _targets.end() && cmd.desc.cbp.floor != _current_target)
             {
                 if(_direction != MotorStop)
                 {
                     _targets.push_back(_current_target);
                 }
-                _targets.push_back(cmd.desc.fbp.floor);
+                _targets.push_back(cmd.desc.cbp.floor);
                 if(_direction == MotorDown)
                 {
                     std::sort(_targets.begin(), _targets.end(), std::greater<int>());
