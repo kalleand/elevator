@@ -20,12 +20,6 @@ class socket_monitor
         void where(int cabin);
         void speed();
 
-        // We need to read position
-/*        void update_position(int elevator, double position);
-
-        void cabin_button(command command);
-
-        void floor_button(command command);*/
     private:
         pthread_mutex_t monitor_lock;
 };
