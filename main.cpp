@@ -80,13 +80,11 @@ int main(int argc, char ** argv)
     // Initialize the connection.
     initHW(hostname.c_str(), port);
 
-    //mon->setMotor(1, MotorUp);
-    //mon->setScale(2, 2);
     // Create listening thread.
     pthread_create(&threads[0], nullptr, read_thread, nullptr);
 
     // Create elevator handles.
-    for(long i = 1; i < number_of_elevators + 1; ++i)
+    for(long i = 1; i < /*number_of_elevators*/ 1 + 1; ++i)
     {
         pthread_create(&threads[i], nullptr, handle_elevator, (void *) i);
     }

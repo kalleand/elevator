@@ -89,13 +89,12 @@ void elevator::set_position(double position)
 
         if ((tmp_pos - (int) tmp_pos) < 2 * EPSILON)
         {
-            pthread_mutex_unlock(&_mon_lock);
             if((int) tmp_pos == _current_target)
             {
+                _direction = MotorStop;
                 _command_output->setMotor(_number, MotorStop);
             }
             _command_output->setScale(_number, (int) tmp_pos);
-            return;
         }
     }
     else
@@ -162,7 +161,7 @@ void elevator::run_elevator()
 
     // Check if current target has been reached
     double current_target_diff = _current_target - _position;
-    if (_direction == MotorStop && std::abs(current_target_diff) < EPSILON)
+    if (_direction == MotorStop)
     {
         // Check next target
         if (_targets.size() > 0)
@@ -172,14 +171,15 @@ void elevator::run_elevator()
 
             current_target_diff = _current_target - _position;
 
-            if (_door_status == 1) // Door is open
+            if (_door_status == DoorOpen)
             {
                 _command_output->setDoor(_number, DoorClose);
                 // Wait for door close
-                pthread_cond_wait(&_door_cond, &_mon_lock);
+                //pthread_cond_wait(&_door_cond, &_mon_lock);
             }
             if (std::abs(current_target_diff) < EPSILON)
             {
+                // WHAT?
             }
             else if (current_target_diff < 0)
             {
@@ -193,28 +193,5 @@ void elevator::run_elevator()
             }
         }
     }
-/*    if (std::abs(diff) < EPSILON) // Move to set position method.
-    {
-        _command_output->handleMotor(_number, MotorStop);
-        _command_output->handleDoor(_number, DoorOpen);
-        _direction = MotorStop;
-    }*/
-/*    if ((diff < 0 && _direction != MotorDown) || (diff > 0 && _direction != MotorUp))
-    {
-        if (_direction == MotorStop) {
-            _command_output->handleDoor(_number, DoorClose);
-        }
-        if (diff < 0)
-        {
-            _command_output->handleMotor(_number, MotorDown);
-            _direction = MotorDown;
-        }
-        else
-        {
-            _command_output->handleMotor(_number, MotorUp);
-            _direction = MotorUp;
-        }
-    }*/
-
     pthread_mutex_unlock(&_mon_lock);
 }
