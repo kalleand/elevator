@@ -155,14 +155,17 @@ void elevator::run_elevator()
         command & cmd = _unhandled_commands.front();
         if (cmd.type == FloorButton)
         {
-            if(std::find(_targets.begin(), _targets.end(), cmd.desc.fbp.floor) == _targets.end())
+            if(std::find(_targets.begin(), _targets.end(), cmd.desc.fbp.floor) == _targets.end() && cmd.desc.fbp.floor != _current_target)
             {
                 _targets.push_back(cmd.desc.fbp.floor);
             }
         }
         else if (cmd.type == CabinButton)
         {
-            _targets.push_back(cmd.desc.cbp.floor);
+            if(std::find(_targets.begin(), _targets.end(), cmd.desc.fbp.floor) == _targets.end() && cmd.desc.fbp.floor != _current_target)
+            {
+                _targets.push_back(cmd.desc.cbp.floor);
+            }
         }
         _unhandled_commands.erase(_unhandled_commands.begin());
     }
