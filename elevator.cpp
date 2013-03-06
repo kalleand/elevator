@@ -1,12 +1,12 @@
 #include "elevator.h"
 
-elevator::elevator() : _command_output(nullptr), _number(0), _position(0.0), _direction(MotorStop), _door_status(DoorClose), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(-1)
+elevator::elevator() : _command_output(nullptr), _number(0), _position(0.0), _direction(MotorStop), _door_status(DoorClose), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(0)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
     pthread_cond_init(&_door_cond, nullptr);
 }
 
-elevator::elevator(int number, socket_monitor * socket_mon) : _command_output(socket_mon), _number(number),_position(0.0), _direction(MotorStop), _door_status(DoorClose), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(-1)
+elevator::elevator(int number, socket_monitor * socket_mon) : _command_output(socket_mon), _number(number),_position(0.0), _direction(MotorStop), _door_status(DoorClose), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(0)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
     pthread_cond_init(&_door_cond, nullptr);
