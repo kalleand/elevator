@@ -90,8 +90,21 @@ void elevator::set_position(double position)
         if ((tmp_pos - (int) tmp_pos) < 2 * EPSILON)
         {
             pthread_mutex_unlock(&_mon_lock);
+            if((int) tmp_pos == _current_target)
+            {
+                _command_output->setMotor(_number, MotorStop);
+            }
             _command_output->setScale(_number, (int) tmp_pos);
             return;
+        }
+    }
+    else
+    {
+        _tick_counter++;
+        if(_tick_counter == 4) // TODO Define four
+        {
+            //pthread_cond_signal()
+            _tick_counter = 0;
         }
     }
     pthread_mutex_unlock(&_mon_lock);
