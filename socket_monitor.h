@@ -4,6 +4,8 @@
 #include "hardwareAPI.h"
 #include <pthread.h>
 
+#include <iostream>
+
 #define EMERGENCY_STOP 32000
 
 class socket_monitor
@@ -12,11 +14,11 @@ class socket_monitor
         socket_monitor();
         ~socket_monitor();
 
-        void handleDoor(int cabin, DoorAction action);
-        void handleMotor(int cabin, MotorAction action);
-        void handleScale(int cabin, int scale);
-        void whereIs(int cabin);
-        void getSpeed();
+        void setDoor(int cabin, DoorAction action);
+        void setMotor(int cabin, MotorAction action);
+        void setScale(int cabin, int scale);
+        void where(int cabin);
+        void speed();
 
         // We need to read position
 /*        void update_position(int elevator, double position);

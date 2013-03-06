@@ -37,6 +37,11 @@ runtest: test-hwAPI.out
 elevator:
 	java -classpath elevator/classes elevator.Elevators -number $(ELEVATORS) -top $(FLOORS) -tcp
 
+both:
+	make elevator &
+	sleep(3)
+	make run
+
 clean:
 	rm -f *.out
 	rm -f *.o

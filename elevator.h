@@ -8,6 +8,8 @@
 #include <cmath>
 #include <pthread.h>
 
+#include <iostream>
+
 class elevator
 {
     public:
