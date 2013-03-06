@@ -5,7 +5,7 @@
 #include <vector>
 #include "hardwareAPI.h"
 #include "elevator.h"
-#include "monitor.h"
+#include "socket_monitor.h"
 #include "command.h"
 
 #ifndef NUMBER_OF_ELEVATORS
@@ -15,7 +15,8 @@
 void * read_thread(void *);
 void * handle_elevator(void *);
 
-monitor * mon;
+std::vector<elevator> elevators;
+socket_monitor * mon;
 
 pthread_mutex_t mutex;
 
@@ -58,6 +59,8 @@ int main(int argc, char ** argv)
     // Initialize the mutex.
     pthread_mutex_init(&mutex, nullptr);
 
+    mon = new socket_monitor();
+
     char * number_of_elevators_char = getenv("NUMBER_OF_ELEVATORS");
     int number_of_elevators = NUMBER_OF_ELEVATORS;
     if (number_of_elevators_char != nullptr)
@@ -68,10 +71,16 @@ int main(int argc, char ** argv)
             number_of_elevators = NUMBER_OF_ELEVATORS;
         }
     }
-    mon = new monitor(number_of_elevators + 1);
+    elevators.push_back(elevator());
+    for (int i = 1; i < number_of_elevators + 1; ++i)
+    {
+        elevators.push_back(elevator(i, mon));
+    }
 
     // Initialize the connection.
     initHW(hostname.c_str(), port);
+
+//    mon->getSpeed();
 
     // Create listening thread.
     pthread_create(&threads[0], nullptr, read_thread, nullptr);
@@ -118,7 +127,7 @@ void * read_thread(void * input)
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
                 // Alert that the one floor button has been pressed.
-                mon->floor_button(tmp);
+//                mon->floor_button(tmp);
                 break;
 
             case CabinButton:
@@ -128,7 +137,7 @@ void * read_thread(void * input)
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
                 // Alert the monitor that a cabin button has been pressed.
-                mon->cabin_button(tmp);
+//                mon->cabin_button(tmp);
                 break;
 
             case Position:
@@ -138,7 +147,7 @@ void * read_thread(void * input)
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
                 // Update the elevator position.
-                mon->update_position(ed.cp.cabin, ed.cp.position);
+//                mon->update_position(ed.cp.cabin, ed.cp.position);
                 break;
 
             case Speed:
@@ -163,7 +172,7 @@ void * read_thread(void * input)
 void * handle_elevator(void * input)
 {
     long elevator_number = (long) input;
-    while (!done)
-        mon->run_elevator((int) elevator_number);
+    while (!done) {}
+//        mon->run_elevator((int) elevator_number);
     pthread_exit(nullptr);
 }
