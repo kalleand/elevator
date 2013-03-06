@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
@@ -14,6 +15,8 @@
 
 void * read_thread(void *);
 void * handle_elevator(void *);
+void schedule_floor_button_press(command cmd);
+void schedule_cabin_button_press(command cmd);
 
 std::vector<elevator> elevators;
 std::vector<double> * position_updates;
@@ -133,9 +136,7 @@ void * read_thread(void * input)
                         ed.fbp.floor, (int) ed.fbp.type);
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
-                // Alert that the one floor button has been pressed.
-                elevators[1].add_command(tmp);
-//                mon->floor_button(tmp);
+                schedule_floor_button_press(tmp);
                 break;
 
             case CabinButton:
@@ -144,9 +145,7 @@ void * read_thread(void * input)
                         ed.cbp.cabin, ed.cbp.floor);
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
-                // Alert the monitor that a cabin button has been pressed.
-                elevators[1].add_command(tmp);
-//                mon->cabin_button(tmp);
+                schedule_cabin_button_press(tmp);
                 break;
 
             case Position:
@@ -198,4 +197,18 @@ void * handle_elevator(void * input)
         elevators[elevator_number].run_elevator();
     }
     pthread_exit(nullptr);
+}
+
+void schedule_floor_button_press(command cmd)
+{
+    std::vector<int> possible_elevators;
+    for (auto it = elevators.begin() + 1, end = elevators.end(); it != end; ++it)
+    {
+    }
+    elevators[1].add_command(cmd);
+}
+
+void schedule_cabin_button_press(command cmd)
+{
+    elevators[1].add_command(cmd);
 }
