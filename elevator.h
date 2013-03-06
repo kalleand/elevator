@@ -35,7 +35,7 @@ class elevator
 
     private:
         pthread_mutex_t _mon_lock;
-        pthread_cond_t _cond_var;
+        pthread_cond_t _door_cond;
         socket_monitor * _command_output;
         int _number;
         double _position;
