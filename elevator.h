@@ -28,6 +28,8 @@ class elevator
         int get_direction();
         int get_door_status();
         void add_command(command new_command);
+        int get_scale();
+        int get_extreme_target();
 
         void run_elevator();
 
@@ -48,6 +50,7 @@ class elevator
         std::vector<command> _unhandled_commands;
         std::vector<int> _targets;
         int _current_target;
+        int _scale;
 };
 
 #endif

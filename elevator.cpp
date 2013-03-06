@@ -1,24 +1,24 @@
 #include "elevator.h"
 
-elevator::elevator() : _command_output(nullptr), _number(0), _position(0.0), _direction(MotorStop), _door_status(DoorClose), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(0)
+elevator::elevator() : _command_output(nullptr), _number(0), _position(0.0), _direction(MotorStop), _door_status(DoorClose), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(0), _scale(0)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
     pthread_cond_init(&_door_cond, nullptr);
 }
 
-elevator::elevator(int number, socket_monitor * socket_mon) : _command_output(socket_mon), _number(number),_position(0.0), _direction(MotorStop), _door_status(DoorClose), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(0)
+elevator::elevator(int number, socket_monitor * socket_mon) : _command_output(socket_mon), _number(number),_position(0.0), _direction(MotorStop), _door_status(DoorClose), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(0), _scale(0)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
     pthread_cond_init(&_door_cond, nullptr);
 }
 
-elevator::elevator(const elevator & source) : _command_output(source._command_output), _number(source._number),_position(source._position), _direction(source._direction), _door_status(source._door_status), _tick_counter(source._tick_counter), _unhandled_commands(source._unhandled_commands), _targets(source._targets), _current_target(source._current_target)
+elevator::elevator(const elevator & source) : _command_output(source._command_output), _number(source._number),_position(source._position), _direction(source._direction), _door_status(source._door_status), _tick_counter(source._tick_counter), _unhandled_commands(source._unhandled_commands), _targets(source._targets), _current_target(source._current_target), _scale(source._scale)
 {
     _mon_lock = source._mon_lock;
     _door_cond = source._door_cond;
 }
 
-elevator::elevator(elevator && source) : _command_output(source._command_output), _number(source._number),_position(source._position), _direction(source._direction), _door_status(source._door_status), _tick_counter(source._tick_counter), _unhandled_commands(source._unhandled_commands), _targets(source._targets), _current_target(source._current_target)
+elevator::elevator(elevator && source) : _command_output(source._command_output), _number(source._number),_position(source._position), _direction(source._direction), _door_status(source._door_status), _tick_counter(source._tick_counter), _unhandled_commands(source._unhandled_commands), _targets(source._targets), _current_target(source._current_target), _scale(source._scale)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
     pthread_cond_init(&_door_cond, nullptr);
@@ -99,6 +99,7 @@ void elevator::set_position(double position)
                 _direction = MotorStop;
                 _command_output->setMotor(_number, MotorStop);
             }
+            _scale = (int) tmp_pos;
             _command_output->setScale(_number, (int) tmp_pos);
         }
     }
@@ -145,6 +146,22 @@ void elevator::add_command(command new_command)
     pthread_mutex_unlock(&_mon_lock);
 }
 
+int elevator::get_scale()
+{
+    pthread_mutex_lock(&_mon_lock);
+    int ret_scale = _scale;
+    pthread_mutex_unlock(&_mon_lock);
+    return ret_scale;
+}
+
+int elevator::get_extreme_target()
+{
+    pthread_mutex_lock(&_mon_lock);
+    int ret_target = _targets.back();
+    pthread_mutex_unlock(&_mon_lock);
+    return ret_target;
+}
+
 void elevator::run_elevator()
 {
     pthread_mutex_lock(&_mon_lock);
@@ -157,21 +174,54 @@ void elevator::run_elevator()
         {
             if(std::find(_targets.begin(), _targets.end(), cmd.desc.fbp.floor) == _targets.end() && cmd.desc.fbp.floor != _current_target)
             {
+                if(_direction != MotorStop)
+                {
+                    _targets.push_back(_current_target);
+                }
                 _targets.push_back(cmd.desc.fbp.floor);
+                if(_direction == MotorDown)
+                {
+                    std::sort(_targets.begin(), _targets.end(), std::greater<int>());
+                }
+                else if(_direction == MotorUp)
+                {
+                    std::sort(_targets.begin(), _targets.end());
+                }
+                else
+                {
+                    std::sort(_targets.begin(), _targets.end());
+                }
+                _current_target = _targets.front();
             }
         }
         else if (cmd.type == CabinButton)
         {
             if(std::find(_targets.begin(), _targets.end(), cmd.desc.fbp.floor) == _targets.end() && cmd.desc.fbp.floor != _current_target)
             {
-                _targets.push_back(cmd.desc.cbp.floor);
+                if(_direction != MotorStop)
+                {
+                    _targets.push_back(_current_target);
+                }
+                _targets.push_back(cmd.desc.fbp.floor);
+                if(_direction == MotorDown)
+                {
+                    std::sort(_targets.begin(), _targets.end(), std::greater<int>());
+                }
+                else if(_direction == MotorUp)
+                {
+                    std::sort(_targets.begin(), _targets.end());
+                }
+                else
+                {
+                    std::sort(_targets.begin(), _targets.end());
+                }
+                _current_target = _targets.front();
             }
         }
         _unhandled_commands.erase(_unhandled_commands.begin());
     }
 
     // Check if current target has been reached
-    double current_target_diff = _current_target - _position;
     if (_direction == MotorStop)
     {
         // Check next target
@@ -180,7 +230,7 @@ void elevator::run_elevator()
             _current_target = (double) _targets.front();
             _targets.erase(_targets.begin());
 
-            current_target_diff = _current_target - _position;
+            double current_target_diff = _current_target - _position;
 
             if (_door_status == DoorOpen)
             {
