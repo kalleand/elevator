@@ -41,6 +41,7 @@ class elevator
         // Should be MotorUp/MotorDown/MotorStop
         int _direction;
         int _door_status;
+        int _tick_counter;
         std::vector<command> _unhandled_commands;
 };
 
