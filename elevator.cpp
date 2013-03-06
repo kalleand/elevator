@@ -67,7 +67,7 @@ void elevator::set_position(double position)
     pthread_mutex_lock(&_mon_lock);
     double old_position = _position;
     _position = position;
-    
+
     // Handle scale
     if(old_position != position)
     {
@@ -143,14 +143,17 @@ void elevator::add_command(command new_command)
 void elevator::run_elevator()
 {
     pthread_mutex_lock(&_mon_lock);
-//    std::cout << "We handle elevator number " << which_elevator << std::endl;
+    //    std::cout << "We handle elevator number " << which_elevator << std::endl;
     // Parse commands
     if (_unhandled_commands.size() > 0)
     {
         command & cmd = _unhandled_commands.front();
         if (cmd.type == FloorButton)
         {
-            _targets.push_back(cmd.desc.fbp.floor);
+            if(std::find(_targets.begin(), _targets.end(), cmd.desc.fbp.floor) == _targets.end())
+            {
+                _targets.push_back(cmd.desc.fbp.floor);
+            }
         }
         else if (cmd.type == CabinButton)
         {

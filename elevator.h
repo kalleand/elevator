@@ -7,6 +7,7 @@
 #include "socket_monitor.h"
 #include <cmath>
 #include <pthread.h>
+#include <algorithm>
 
 #include <iostream>
 
