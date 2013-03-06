@@ -16,6 +16,8 @@ void * read_thread(void *);
 void * handle_elevator(void *);
 
 std::vector<elevator> elevators;
+std::vector<double> * position_updates;
+std::vector<pthread_mutex_t> position_updates_locks;
 socket_monitor * mon;
 
 pthread_mutex_t mutex;
@@ -77,6 +79,13 @@ int main(int argc, char ** argv)
         elevators.push_back(elevator(i, mon));
     }
 
+    position_updates = new std::vector<double>[number_of_elevators];
+    position_updates_locks.resize(number_of_elevators + 1);
+    for (auto it = position_updates_locks.begin() + 1, end = position_updates_locks.end(); it != end; ++it)
+    {
+        pthread_mutex_init(&(*it), nullptr);
+    }
+
     // Initialize the connection.
     initHW(hostname.c_str(), port);
 
@@ -84,7 +93,7 @@ int main(int argc, char ** argv)
     pthread_create(&threads[0], nullptr, read_thread, nullptr);
 
     // Create elevator handles.
-    for(long i = 1; i < /*number_of_elevators*/ 1 + 1; ++i)
+    for(long i = 1; i < number_of_elevators + 1; ++i)
     {
         pthread_create(&threads[i], nullptr, handle_elevator, (void *) i);
     }
@@ -147,7 +156,9 @@ void * read_thread(void * input)
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
                 // Update the elevator position.
-                elevators[ed.cp.cabin].set_position(ed.cp.position);
+                pthread_mutex_lock(&position_updates_locks[ed.cp.cabin]);
+                position_updates[ed.cp.cabin].push_back(ed.cp.position);
+                pthread_mutex_unlock(&position_updates_locks[ed.cp.cabin]);
                 break;
 
             case Speed:
@@ -174,7 +185,17 @@ void * handle_elevator(void * input)
     long elevator_number = (long) input;
     while (!done)
     {
-        elevators[(int) elevator_number].run_elevator();
+        pthread_mutex_lock(&position_updates_locks[elevator_number]);
+        if (position_updates[elevator_number].size() > 0)
+        {
+            for (auto it = position_updates[elevator_number].begin(), end = position_updates[elevator_number].end(); it != end; ++it)
+            {
+                elevators[elevator_number].set_position(*it);
+            }
+            position_updates[elevator_number].clear();
+        }
+        pthread_mutex_unlock(&position_updates_locks[elevator_number]);
+        elevators[elevator_number].run_elevator();
     }
     pthread_exit(nullptr);
 }
