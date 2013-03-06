@@ -173,6 +173,6 @@ void * handle_elevator(void * input)
 {
     long elevator_number = (long) input;
     while (!done) {}
-//        mon->run_elevator((int) elevator_number);
+        elevators[(int) elevator_number].run_elevator();
     pthread_exit(nullptr);
 }
