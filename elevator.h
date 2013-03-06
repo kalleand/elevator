@@ -4,6 +4,7 @@
 #include <vector>
 #include "hardwareAPI.h"
 #include "command.h"
+#include <pthread.h>
 
 class elevator
 {
@@ -17,11 +18,21 @@ class elevator
         elevator & operator=(const elevator & source);
         elevator & operator=(elevator && source);
 
-        int number;
-        double position;
+        void set_position(double position);
+        double get_position();
+        int get_direction();
+        int get_door_status();
+        void add_command(command new_command);
+
+    private:
+        pthread_mutex_t _mon_lock;
+        pthread_cond_t _cond_var;
+        int _number;
+        double _position;
         // Should be MotorUp/MotorDown/MotorStop
-        int direction;
-        std::vector<command> unhandled_commands;
+        int _direction;
+        int _door_status;
+        std::vector<command> _unhandled_commands;
 };
 
 #endif
