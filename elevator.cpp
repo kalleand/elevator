@@ -72,18 +72,23 @@ void elevator::set_position(double position)
     if(old_position != position)
     {
         double tmp_pos = position;
-        if(_direction == MotorUp)
+        if(std::abs(tmp_pos - TICK) < EPSILON || std::abs(5.0 - tmp_pos - TICK) < EPSILON)
         {
-            tmp_pos += TICK;
-        }
-        else if( _direction == MotorDown)
-        {
-            tmp_pos -= TICK;
-        }
-        else // _direction == MotorStop
-        {
-            // HOW THE FUCK DID THIS HAPPEN?!
-            // moving elevator and the motor is stopped?
+            if(_direction == MotorUp)
+            {
+                _position = 5;
+                tmp_pos += TICK;
+            }
+            else if( _direction == MotorDown)
+            {
+                _position = 0;
+                tmp_pos -= TICK;
+            }
+            else // _direction == MotorStop
+            {
+                // HOW THE FUCK DID THIS HAPPEN?!
+                // moving elevator and the motor is stopped?
+            }
         }
         tmp_pos += EPSILON;
 
