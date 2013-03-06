@@ -80,8 +80,8 @@ int main(int argc, char ** argv)
     // Initialize the connection.
     initHW(hostname.c_str(), port);
 
-//    mon->getSpeed();
-
+    //mon->setMotor(1, MotorUp);
+    //mon->setScale(2, 2);
     // Create listening thread.
     pthread_create(&threads[0], nullptr, read_thread, nullptr);
 
@@ -147,7 +147,7 @@ void * read_thread(void * input)
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
                 // Update the elevator position.
-//                mon->update_position(ed.cp.cabin, ed.cp.position);
+                elevators[ed.cp.cabin].set_position(ed.cp.position);
                 break;
 
             case Speed:
@@ -172,7 +172,10 @@ void * read_thread(void * input)
 void * handle_elevator(void * input)
 {
     long elevator_number = (long) input;
-    while (!done) {}
+    elevators[elevator_number].run_elevator();
+    while (!done)
+    {
+    }
 //        mon->run_elevator((int) elevator_number);
     pthread_exit(nullptr);
 }

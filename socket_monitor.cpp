@@ -83,28 +83,37 @@ void monitor::floor_button(command command)
     }
 }*/
 
-void socket_monitor::handleDoor(int cabin, DoorAction action)
+void socket_monitor::setDoor(int cabin, DoorAction action)
 {
-
+    pthread_mutex_lock(&monitor_lock);
+    handleDoor(cabin, action);
+    pthread_mutex_unlock(&monitor_lock);
 }
 
-void socket_monitor::handleMotor(int cabin, MotorAction action)
+void socket_monitor::setMotor(int cabin, MotorAction action)
 {
-
+    pthread_mutex_lock(&monitor_lock);
+    handleMotor(cabin, action);
+    pthread_mutex_unlock(&monitor_lock);
 }
 
-void socket_monitor::handleScale(int cabin, int scale)
+void socket_monitor::setScale(int cabin, int scale)
 {
-
+    pthread_mutex_lock(&monitor_lock);
+    handleScale(cabin, scale);
+    pthread_mutex_unlock(&monitor_lock);
 }
 
-void socket_monitor::whereIs(int cabin)
+void socket_monitor::where(int cabin)
 {
-
+    pthread_mutex_lock(&monitor_lock);
+    whereIs(cabin);
+    pthread_mutex_unlock(&monitor_lock);
 }
 
-void socket_monitor::getSpeed()
+void socket_monitor::speed()
 {
-
+    pthread_mutex_lock(&monitor_lock);
+    getSpeed();
+    pthread_mutex_unlock(&monitor_lock);
 }
-

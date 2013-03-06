@@ -59,7 +59,35 @@ elevator & elevator::operator=(elevator && source)
 void elevator::set_position(double position)
 {
     pthread_mutex_lock(&_mon_lock);
+    double old_position = _position;
     _position = position;
+    
+    // Handle scale
+    if(old_position != position)
+    {
+        double tmp_pos = position;
+        if(_direction == MotorUp)
+        {
+            tmp_pos += TICK;
+        }
+        else if( _direction == MotorDown)
+        {
+            tmp_pos -= TICK;
+        }
+        else // _direction == MotorStop
+        {
+            // HOW THE FUCK DID THIS HAPPEN?!
+            // moving elevator and the motor is stopped?
+        }
+        tmp_pos += EPSILON;
+
+        if ((tmp_pos - (int) tmp_pos) < 2 * EPSILON)
+        {
+            pthread_mutex_unlock(&_mon_lock);
+            _command_output->setScale(_number, (int) tmp_pos);
+            return;
+        }
+    }
     pthread_mutex_unlock(&_mon_lock);
 }
 
@@ -96,12 +124,12 @@ void elevator::add_command(command new_command)
 
 void elevator::run_elevator()
 {
-    pthread_mutex_lock(&_mon_lock);
-
+    //pthread_mutex_lock(&_mon_lock);
 //    std::cout << "We handle elevator number " << which_elevator << std::endl;
     /* Parse commands */
 
     /* Check next target */
+    /*
     double target = 2.0;
 
     double diff = target - _position;
@@ -129,4 +157,5 @@ void elevator::run_elevator()
     }
 
     pthread_mutex_unlock(&_mon_lock);
+    */
 }
