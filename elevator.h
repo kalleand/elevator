@@ -43,6 +43,8 @@ class elevator
         int _door_status;
         int _tick_counter;
         std::vector<command> _unhandled_commands;
+        std::vector<int> _targets;
+        int _current_target;
 };
 
 #endif

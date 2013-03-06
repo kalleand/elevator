@@ -127,6 +127,7 @@ void * read_thread(void * input)
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
                 // Alert that the one floor button has been pressed.
+                elevators[1].add_command(tmp);
 //                mon->floor_button(tmp);
                 break;
 
@@ -137,6 +138,7 @@ void * read_thread(void * input)
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
                 // Alert the monitor that a cabin button has been pressed.
+                elevators[1].add_command(tmp);
 //                mon->cabin_button(tmp);
                 break;
 
