@@ -164,7 +164,7 @@ void elevator::set_position(double position)
                     command * cmd = _sched_monitor->get_first_command_not_fitted();
                     if(cmd != nullptr)
                     {
-                        _unhandled_commands.push_back(*cmd);
+                        handle_command(*cmd);
                         delete cmd;
                     }
                     // TODO Check for unschedueled FB commands
@@ -269,6 +269,15 @@ void elevator::run_elevator()
                 _direction = MotorUp;
                 _state = Moving;
                 _command_output->setMotor(_number, MotorUp);
+            }
+        }
+        else
+        {
+            command * cmd = _sched_monitor->get_first_command_not_fitted();
+            if(cmd != nullptr)
+            {
+                handle_command(*cmd);
+                delete cmd;
             }
         }
     }
