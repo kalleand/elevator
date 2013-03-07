@@ -10,7 +10,7 @@ endif
 CPP=g++ -std=c++0x -Wall
 CFLAGS=-pthread
 
-OFILES=hardwareAPI.o socket_monitor.o elevator.o command.o
+OFILES=hardwareAPI.o socket_monitor.o elevator.o command.o commands_to_schedule_monitor.o
 
 all: default
 
