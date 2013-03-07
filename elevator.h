@@ -27,10 +27,11 @@ class elevator
         void set_position(double position);
         double get_position();
         int get_direction();
-        int get_door_status();
         void add_command(command new_command);
         int get_scale();
         int get_extreme_target();
+        int get_extreme_direction();
+        bool is_schedulable();
 
         void run_elevator();
 
@@ -47,10 +48,8 @@ class elevator
         socket_monitor * _command_output;
         int _number;
         double _position;
-//        double _speed;
-        // Should be MotorUp/MotorDown/MotorStop
         int _direction;
-        int _door_status;
+        int _extreme_direction;
         int _tick_counter;
         std::vector<command> _unhandled_commands;
         std::vector<int> _targets;
