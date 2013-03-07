@@ -77,6 +77,14 @@ typedef enum {
     MotorStop = 0,
     MotorDown = -1
 } MotorAction;
+typedef enum
+{
+    Idle,
+    Moving,
+    OpeningDoor,
+    OpenDoor,
+    ClosingDoor
+} State;
 
 //
 // Primitives controlling the hardware (motors, doors & status

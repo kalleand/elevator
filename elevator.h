@@ -8,6 +8,7 @@
 #include <cmath>
 #include <pthread.h>
 #include <algorithm>
+#include <sys/time.h>
 
 #include <iostream>
 
@@ -37,6 +38,10 @@ class elevator
         static constexpr double EPSILON = 0.0000001;
 
     private:
+        double read_time();
+
+        static constexpr double TIME_LIMIT = 2.5;
+
         pthread_mutex_t _mon_lock;
         pthread_cond_t _door_cond;
         socket_monitor * _command_output;
@@ -51,6 +56,8 @@ class elevator
         std::vector<int> _targets;
         int _current_target;
         int _scale;
+        int _state;
+        double _time;
 };
 
 #endif
