@@ -9,6 +9,7 @@
 #include "elevator.h"
 #include "socket_monitor.h"
 #include "command.h"
+#include "commands_to_schedule_monitor.h"
 
 #define DEBUG
 
@@ -18,12 +19,13 @@
 
 void * read_thread(void *);
 void * handle_elevator(void *);
-void schedule_floor_button_press(command cmd);
+void * scheduler(void *);
 
 std::vector<elevator> elevators;
 std::vector<double> * position_updates;
 pthread_mutex_t * position_updates_locks;
 socket_monitor * mon;
+commands_to_schedule_monitor * commands_to_schedule;
 
 pthread_mutex_t mutex;
 
@@ -61,12 +63,13 @@ int main(int argc, char ** argv)
     }
 
     // The threads used in this simulation.
-    pthread_t threads[NUMBER_OF_ELEVATORS + 1];
+    std::vector<pthread_t> threads;
 
     // Initialize the mutex.
     pthread_mutex_init(&mutex, nullptr);
 
     mon = new socket_monitor();
+    commands_to_schedule = new commands_to_schedule_monitor();
 
     char * number_of_elevators_char = getenv("NUMBER_OF_ELEVATORS");
     int number_of_elevators = NUMBER_OF_ELEVATORS;
@@ -94,14 +97,18 @@ int main(int argc, char ** argv)
     // Initialize the connection.
     initHW(hostname.c_str(), port);
 
-    // Create listening thread.
-    pthread_create(&threads[0], nullptr, read_thread, nullptr);
+    threads.resize(number_of_elevators + 2);
+    // Create scheduling thread.
+    pthread_create(&threads[0], nullptr, scheduler, nullptr);
 
     // Create elevator handles.
     for(long i = 1; i < number_of_elevators + 1; ++i)
     {
         pthread_create(&threads[i], nullptr, handle_elevator, (void *) i);
     }
+
+    // Create listening thread.
+    pthread_create(&threads[number_of_elevators + 1], nullptr, read_thread, nullptr);
 
     getchar();
     done = true;
@@ -113,6 +120,7 @@ int main(int argc, char ** argv)
     }
 
     delete mon;
+    delete commands_to_schedule;
 
     std::cout << "Hejsan!" << std::endl;
     terminate();
@@ -138,7 +146,7 @@ void * read_thread(void * input)
                         ed.fbp.floor, (int) ed.fbp.type);
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
-                schedule_floor_button_press(tmp);
+                commands_to_schedule->add_new_command_to_schedule(tmp);
                 break;
 
             case CabinButton:
@@ -204,48 +212,53 @@ void * handle_elevator(void * input)
     pthread_exit(nullptr);
 }
 
-void schedule_floor_button_press(command cmd)
+void * scheduler(void * arguments)
 {
-    FloorButtonPressDesc button = cmd.desc.fbp;
-    std::vector<elevator *> possible_elevators;
-    for (unsigned int i = 1; i < elevators.size(); ++i)
+    while (!done)
     {
-        elevator & el = elevators[i];
-        // Find idle elevators
-        if (el.get_direction() == MotorStop && el.get_extreme_target() == el.get_scale())
+        command cmd = commands_to_schedule->get_first_new_command();
+        FloorButtonPressDesc button = cmd.desc.fbp;
+        std::vector<elevator *> possible_elevators;
+        for (unsigned int i = 1; i < elevators.size(); ++i)
         {
-            possible_elevators.push_back(&el);
+            elevator & el = elevators[i];
+            // Find idle elevators
+            if (el.get_direction() == MotorStop  && el.get_extreme_target() == el.get_scale())
+            {
+                possible_elevators.push_back(&el);
+            }
+            // Find elevators going in the right direction
+            else if (button.type == GoingUp && el.get_direction() != MotorDown && button.floor <= el.get_extreme_target())
+            {
+                possible_elevators.push_back(&el);
+            }
+            else if (button.type == GoingDown && el.get_direction() != MotorUp && button.floor >= el.get_extreme_target())
+            {
+                possible_elevators.push_back(&el);
+            }
         }
-        // Find elevators going in the right direction
-        else if (button.type == GoingUp && el.get_direction() != MotorDown && button.floor <= el.get_extreme_target())
+
+        elevator * best_elevator = possible_elevators.size() > 0 ? possible_elevators[0] : nullptr;
+        if (best_elevator == nullptr)
         {
-            possible_elevators.push_back(&el);
+            commands_to_schedule->add_command_not_possible_to_schedule(cmd);
+            continue;
         }
-        else if (button.type == GoingDown && el.get_direction() != MotorUp && button.floor >= el.get_extreme_target())
+
+        int button_press_position = button.floor / elevator::TICK;
+        int best_position = std::abs( button_press_position - (int) ((best_elevator->get_position() + elevator::EPSILON) / elevator::TICK));
+
+        for (auto it = possible_elevators.begin() + 1, end = possible_elevators.end(); it != end; ++it)
         {
-            possible_elevators.push_back(&el);
+            int elevator_position_relative_button_press = std::abs( button_press_position - (int) (((*it)->get_position() + elevator::EPSILON) / elevator::TICK));
+
+            if (elevator_position_relative_button_press < best_position)
+            {
+                best_position = elevator_position_relative_button_press;
+                best_elevator = *it;
+            }
         }
+        best_elevator->add_command(cmd);
     }
-
-    elevator * best_elevator = possible_elevators.size() > 0 ? possible_elevators[0] : nullptr;
-    if (best_elevator == nullptr)
-    {
-        // Add to queue of commands not given to any elevator.
-        return;
-    }
-
-    int button_press_position = button.floor / elevator::TICK;
-    int best_position = std::abs(button_press_position - (int) ((best_elevator->get_position() + elevator::EPSILON) / elevator::TICK));
-
-    for (auto it = possible_elevators.begin() + 1, end = possible_elevators.end(); it != end; ++it)
-    {
-        int elevator_position_relative_button_press = std::abs(button_press_position - (int) (((*it)->get_position() + elevator::EPSILON) / elevator::TICK));
-
-        if (elevator_position_relative_button_press < best_position)
-        {
-            best_position = elevator_position_relative_button_press;
-            best_elevator = *it;
-        }
-    }
-    best_elevator->add_command(cmd);
+    return nullptr;
 }
