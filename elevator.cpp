@@ -71,15 +71,18 @@ void elevator::set_position(double position)
     if(_state == Moving)
     {
         double tmp_pos = position;
+        bool is_extreme = false;
         if(std::abs(tmp_pos - TICK) < EPSILON || std::abs(5.0 - tmp_pos - TICK) < EPSILON)
         {
             if(_direction == MotorUp)
             {
+                is_extreme = true;
                 _position = 5;
                 tmp_pos += TICK;
             }
             else if( _direction == MotorDown)
             {
+                is_extreme = true;
                 _position = 0;
                 tmp_pos -= TICK;
             }
@@ -96,6 +99,8 @@ void elevator::set_position(double position)
             if((int) tmp_pos == _current_target)
             {
                 _direction = MotorStop;
+                if(is_extreme)
+                    _extreme_direction = MotorStop;
                 _state = OpeningDoor;
                 _command_output->setMotor(_number, MotorStop);
                 _command_output->setDoor(_number, DoorOpen);
@@ -247,7 +252,7 @@ void elevator::run_elevator()
                     ok_command = false;
                 }
             }
-            else // _extreme_direction == MotorUp
+            else if(_extreme_direction == MotorUp)
             {
                 if(cmd.desc.fbp.type != GoingUp)
                 {
@@ -265,7 +270,9 @@ void elevator::run_elevator()
                 _targets.push_back(cmd.desc.fbp.floor);
                 if(_direction == MotorDown)
                 {
-                    std::sort(_targets.begin(), _targets.end(), std::greater<int>());
+                    //std::sort(_targets.begin(), _targets.end(), std::greater<int>());
+                    std::sort(_targets.begin(), _targets.end());
+                    std::reverse(_targets.begin(), _targets.end());
                 }
                 else if(_direction == MotorUp)
                 {
@@ -294,23 +301,23 @@ void elevator::run_elevator()
             }
             else if(_extreme_direction == MotorDown)
             {
-                if((double)cmd.desc.cbp.floor > _position)
+                if(cmd.desc.cbp.floor > _position)
                 {
                     std::cerr << "FAULTY CABIN BUTTON PRESS!" << std::endl <<
                         "Tried to go up and elevator is going down" << std::endl;
                     ok_command = false;
                 }
             }
-            else // _extreme_direction == MotorUp
+            else if(_extreme_direction == MotorUp)
             {
-                if((double)cmd.desc.cbp.floor < _position)
+                if(cmd.desc.cbp.floor < _position)
                 {
                     std::cerr << "FAULTY CABIN BUTTON PRESS!" << std::endl <<
                         "Tried to go down and elevator is going up" << std::endl;
                     ok_command = false;
                 }
             }
-            if(ok_command && std::find(_targets.begin(), _targets.end(), cmd.desc.cbp.floor) == _targets.end() && cmd.desc.cbp.floor != _current_target)
+            if(ok_command && std::find(_targets.begin(), _targets.end(), cmd.desc.cbp.floor) == _targets.end())
             {
                 if(_direction != MotorStop)
                 {
@@ -319,7 +326,9 @@ void elevator::run_elevator()
                 _targets.push_back(cmd.desc.cbp.floor);
                 if(_direction == MotorDown)
                 {
-                    std::sort(_targets.begin(), _targets.end(), std::greater<int>());
+                    //std::sort(_targets.begin(), _targets.end(), std::greater<int>());
+                    std::sort(_targets.begin(), _targets.end());
+                    std::reverse(_targets.begin(), _targets.end());
                 }
                 else if(_direction == MotorUp)
                 {
@@ -330,6 +339,10 @@ void elevator::run_elevator()
                     std::sort(_targets.begin(), _targets.end());
                 }
                 _current_target = _targets.front();
+                if(_direction != MotorStop)
+                {
+                    _targets.erase(_targets.begin());
+                }
             }
         }
         _unhandled_commands.erase(_unhandled_commands.begin());
