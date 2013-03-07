@@ -22,12 +22,14 @@ void * handle_elevator(void *);
 void * scheduler(void *);
 
 std::vector<elevator> elevators;
-std::vector<double> * position_updates;
-pthread_mutex_t * position_updates_locks;
+std::vector<command> * elevator_specific_updates;
+pthread_mutex_t * elevator_updates_locks;
 socket_monitor * mon;
 commands_to_schedule_monitor * commands_to_schedule;
 
+#ifdef DEBUG
 pthread_mutex_t mutex;
+#endif
 
 bool done = false;
 
@@ -65,8 +67,10 @@ int main(int argc, char ** argv)
     // The threads used in this simulation.
     std::vector<pthread_t> threads;
 
+#ifdef DEBUG
     // Initialize the mutex.
     pthread_mutex_init(&mutex, nullptr);
+#endif
 
     mon = new socket_monitor();
     commands_to_schedule = new commands_to_schedule_monitor();
@@ -87,11 +91,11 @@ int main(int argc, char ** argv)
         elevators.push_back(elevator(i, mon));
     }
 
-    position_updates = new std::vector<double>[number_of_elevators + 1];
-    position_updates_locks = new pthread_mutex_t[number_of_elevators + 1];
+    elevator_specific_updates = new std::vector<command>[number_of_elevators + 1];
+    elevator_updates_locks = new pthread_mutex_t[number_of_elevators + 1];
     for (int i = 1; i < number_of_elevators + 1; ++i)
     {
-        pthread_mutex_init(&position_updates_locks[i], nullptr);
+        pthread_mutex_init(&elevator_updates_locks[i], nullptr);
     }
 
     // Initialize the connection.
@@ -141,48 +145,58 @@ void * read_thread(void * input)
 
         switch (e) {
             case FloorButton:
+#ifdef DEBUG
                 pthread_mutex_lock(&mutex);
                 fprintf(stdout, "floor button: floor %d, type %d\n",
                         ed.fbp.floor, (int) ed.fbp.type);
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
+#endif
                 commands_to_schedule->add_new_command_to_schedule(tmp);
                 break;
 
             case CabinButton:
+#ifdef DEBUG
                 pthread_mutex_lock(&mutex);
                 fprintf(stdout, "cabin button: cabin %d, floor %d\n",
                         ed.cbp.cabin, ed.cbp.floor);
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
-                elevators[tmp.desc.cbp.cabin].add_command(tmp);
+#endif
+                elevator_specific_updates[ed.cbp.cabin].push_back(tmp);
                 break;
 
             case Position:
+#ifdef DEBUG
                 pthread_mutex_lock(&mutex);
                 fprintf(stdout, "cabin position: cabin %d, position %f\n",
                         ed.cp.cabin, ed.cp.position);
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
+#endif
                 // Update the elevator position.
-                pthread_mutex_lock(&position_updates_locks[ed.cp.cabin]);
-                position_updates[ed.cp.cabin].push_back(ed.cp.position);
-                pthread_mutex_unlock(&position_updates_locks[ed.cp.cabin]);
+                pthread_mutex_lock(&elevator_updates_locks[ed.cp.cabin]);
+                elevator_specific_updates[ed.cp.cabin].push_back(tmp);
+                pthread_mutex_unlock(&elevator_updates_locks[ed.cp.cabin]);
                 break;
 
             case Speed:
+#ifdef DEBUG
                 pthread_mutex_lock(&mutex);
                 fprintf(stdout, "speed: %f\n", ed.s.speed);
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
+#endif
                 // Update Speed. (Should we care about this?)
                 break;
 
             case Error:
+#ifdef DEBUG
                 pthread_mutex_lock(&mutex);
                 fprintf(stdout, "error: \"%s\"\n", ed.e.str);
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
+#endif
                 break;
         }
     }
@@ -194,19 +208,22 @@ void * handle_elevator(void * input)
     long elevator_number = (long) input;
     while (!done)
     {
-        pthread_mutex_lock(&position_updates_locks[elevator_number]);
-        if (position_updates[elevator_number].size() > 0)
+        if (elevator_specific_updates[elevator_number].size() > 0)
         {
-#ifdef DEBUG
-            assert(position_updates[elevator_number].size() == 1);
-#endif
-            for (auto it = position_updates[elevator_number].begin(), end = position_updates[elevator_number].end(); it != end; ++it)
+            pthread_mutex_lock(&elevator_updates_locks[elevator_number]);
+
+            command & cmd = elevator_specific_updates[elevator_number].front();
+            if (cmd.type == CabinButton)
             {
-                elevators[elevator_number].set_position(*it);
+                elevators[elevator_number].add_command(cmd);
             }
-            position_updates[elevator_number].clear();
+            else// if (cmd.type == Position)
+            {
+                elevators[elevator_number].set_position(cmd.desc.cp.position);
+            }
+            elevator_specific_updates[elevator_number].erase(elevator_specific_updates[elevator_number].begin());
+            pthread_mutex_unlock(&elevator_updates_locks[elevator_number]);
         }
-        pthread_mutex_unlock(&position_updates_locks[elevator_number]);
         elevators[elevator_number].run_elevator();
     }
     pthread_exit(nullptr);
