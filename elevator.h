@@ -41,6 +41,7 @@ class elevator
 
     private:
         double read_time();
+        void handle_command(command cmd);
 
         static constexpr double TIME_LIMIT = 2.5;
 
@@ -53,7 +54,6 @@ class elevator
         int _direction;
         int _extreme_direction;
         int _tick_counter;
-        std::vector<command> _unhandled_commands;
         std::vector<int> _targets;
         int _current_target;
         int _scale;

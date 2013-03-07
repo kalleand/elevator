@@ -1,28 +1,27 @@
 #include "elevator.h"
 
-elevator::elevator() : _command_output(nullptr), _sched_monitor(nullptr), _number(0), _position(0.0), _direction(MotorStop), _extreme_direction(MotorStop), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(0), _scale(0), _state(Idle), _time(-1)
+elevator::elevator() : _command_output(nullptr), _sched_monitor(nullptr), _number(0), _position(0.0), _direction(MotorStop), _extreme_direction(MotorStop), _tick_counter(0), _targets(), _current_target(0), _scale(0), _state(Idle), _time(-1)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
     pthread_cond_init(&_door_cond, nullptr);
 }
 
-elevator::elevator(int number, socket_monitor * socket_mon, commands_to_schedule_monitor * schedule_monitor) : _command_output(socket_mon), _sched_monitor(schedule_monitor), _number(number),_position(0.0), _direction(MotorStop), _extreme_direction(MotorStop), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(0), _scale(0), _state(Idle), _time(-1)
+elevator::elevator(int number, socket_monitor * socket_mon, commands_to_schedule_monitor * schedule_monitor) : _command_output(socket_mon), _sched_monitor(schedule_monitor), _number(number),_position(0.0), _direction(MotorStop), _extreme_direction(MotorStop), _tick_counter(0), _targets(), _current_target(0), _scale(0), _state(Idle), _time(-1)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
     pthread_cond_init(&_door_cond, nullptr);
 }
 
-elevator::elevator(const elevator & source) : _command_output(source._command_output), _sched_monitor(source._sched_monitor), _number(source._number),_position(source._position), _direction(source._direction), _extreme_direction(source._extreme_direction), _tick_counter(source._tick_counter), _unhandled_commands(source._unhandled_commands), _targets(source._targets), _current_target(source._current_target), _scale(source._scale), _state(source._state), _time(source._time)
+elevator::elevator(const elevator & source) : _command_output(source._command_output), _sched_monitor(source._sched_monitor), _number(source._number),_position(source._position), _direction(source._direction), _extreme_direction(source._extreme_direction), _tick_counter(source._tick_counter), _targets(source._targets), _current_target(source._current_target), _scale(source._scale), _state(source._state), _time(source._time)
 {
     _mon_lock = source._mon_lock;
     _door_cond = source._door_cond;
 }
 
-elevator::elevator(elevator && source) : _command_output(source._command_output), _sched_monitor(source._sched_monitor), _number(source._number),_position(source._position), _direction(source._direction), _extreme_direction(source._extreme_direction), _tick_counter(source._tick_counter), _unhandled_commands(source._unhandled_commands), _targets(source._targets), _current_target(source._current_target), _scale(source._scale), _state(source._state), _time(source._time)
+elevator::elevator(elevator && source) : _command_output(source._command_output), _sched_monitor(source._sched_monitor), _number(source._number),_position(source._position), _direction(source._direction), _extreme_direction(source._extreme_direction), _tick_counter(source._tick_counter), _targets(source._targets), _current_target(source._current_target), _scale(source._scale), _state(source._state), _time(source._time)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
     pthread_cond_init(&_door_cond, nullptr);
-    source._unhandled_commands.clear();
     source._command_output = nullptr;
     source._sched_monitor = nullptr;
 }
@@ -40,7 +39,6 @@ elevator & elevator::operator=(const elevator & source)
         _direction = source._direction;
         _tick_counter = source._tick_counter;
         _extreme_direction = source._extreme_direction;
-        _unhandled_commands = source._unhandled_commands;
         _targets = source._targets;
         _sched_monitor = source._sched_monitor;
         _command_output = source._command_output;
@@ -57,11 +55,9 @@ elevator & elevator::operator=(elevator && source)
         _direction = source._direction;
         _tick_counter = source._tick_counter;
         _extreme_direction = source._extreme_direction;
-        _unhandled_commands = source._unhandled_commands;
         _targets = source._targets;
         _sched_monitor = source._sched_monitor;
         _command_output = source._command_output;
-        source._unhandled_commands.clear();
         source._command_output = nullptr;
         source._sched_monitor = nullptr;
     }
@@ -192,7 +188,7 @@ int elevator::get_direction()
 void elevator::add_command(command new_command)
 {
     pthread_mutex_lock(&_mon_lock);
-    _unhandled_commands.push_back(new_command);
+    handle_command(new_command);
     pthread_mutex_unlock(&_mon_lock);
 }
 
@@ -234,127 +230,7 @@ bool elevator::is_schedulable()
 void elevator::run_elevator()
 {
     pthread_mutex_lock(&_mon_lock);
-    //    std::cout << "We handle elevator number " << which_elevator << std::endl;
-    // Parse commands
-    if (_unhandled_commands.size() > 0)
-    {
-        command & cmd = _unhandled_commands.front();
-        if (cmd.type == FloorButton)
-        {
-            bool ok_command = true;
-            if(_extreme_direction == MotorStop)
-            {
-                if(cmd.desc.fbp.type == GoingUp)
-                    _extreme_direction = MotorUp;
-                else
-                    _extreme_direction = MotorDown;
-            }
-            else if(_extreme_direction == MotorDown)
-            {
-                if(cmd.desc.fbp.type != GoingDown)
-                {
-                    std::cerr << "FAULTY FLOOR BUTTON PRESS!" << std::endl <<
-                        "Tried to go up and elevator is going down" << std::endl;
-                    ok_command = false;
-                }
-            }
-            else if(_extreme_direction == MotorUp)
-            {
-                if(cmd.desc.fbp.type != GoingUp)
-                {
-                    std::cerr << "FAULTY FLOOR BUTTON PRESS!" << std::endl <<
-                        "Tried to go down and elevator is going up" << std::endl;
-                    ok_command = false;
-                }
-            }
-            if(ok_command && std::find(_targets.begin(), _targets.end(), cmd.desc.fbp.floor) == _targets.end())
-            {
-                if(_direction != MotorStop)
-                {
-                    _targets.push_back(_current_target);
-                }
-                _targets.push_back(cmd.desc.fbp.floor);
-                if(_direction == MotorDown)
-                {
-                    //std::sort(_targets.begin(), _targets.end(), std::greater<int>());
-                    std::sort(_targets.begin(), _targets.end());
-                    std::reverse(_targets.begin(), _targets.end());
-                }
-                else if(_direction == MotorUp)
-                {
-                    std::sort(_targets.begin(), _targets.end());
-                }
-                else
-                {
-                    std::sort(_targets.begin(), _targets.end());
-                }
-                _current_target = _targets.front();
-                if(_direction != MotorStop)
-                {
-                    _targets.erase(_targets.begin());
-                }
-            }
-        }
-        else if (cmd.type == CabinButton)
-        {
-            bool ok_command = true;
-            if(_extreme_direction == MotorStop)
-            {
-                if((double) cmd.desc.cbp.floor > _position)
-                    _extreme_direction = MotorUp;
-                else if((double) cmd.desc.cbp.floor < _position)
-                    _extreme_direction = MotorDown;
-            }
-            else if(_extreme_direction == MotorDown)
-            {
-                if(cmd.desc.cbp.floor > _position)
-                {
-                    std::cerr << "FAULTY CABIN BUTTON PRESS!" << std::endl <<
-                        "Tried to go up and elevator is going down" << std::endl;
-                    ok_command = false;
-                }
-            }
-            else if(_extreme_direction == MotorUp)
-            {
-                if(cmd.desc.cbp.floor < _position)
-                {
-                    std::cerr << "FAULTY CABIN BUTTON PRESS!" << std::endl <<
-                        "Tried to go down and elevator is going up" << std::endl;
-                    ok_command = false;
-                }
-            }
-            if(ok_command && std::find(_targets.begin(), _targets.end(), cmd.desc.cbp.floor) == _targets.end())
-            {
-                if(_direction != MotorStop)
-                {
-                    _targets.push_back(_current_target);
-                }
-                _targets.push_back(cmd.desc.cbp.floor);
-                if(_direction == MotorDown)
-                {
-                    //std::sort(_targets.begin(), _targets.end(), std::greater<int>());
-                    std::sort(_targets.begin(), _targets.end());
-                    std::reverse(_targets.begin(), _targets.end());
-                }
-                else if(_direction == MotorUp)
-                {
-                    std::sort(_targets.begin(), _targets.end());
-                }
-                else
-                {
-                    std::sort(_targets.begin(), _targets.end());
-                }
-                _current_target = _targets.front();
-                if(_direction != MotorStop)
-                {
-                    _targets.erase(_targets.begin());
-                }
-            }
-        }
-        _unhandled_commands.erase(_unhandled_commands.begin());
-    }
 
-    // Check if current target has been reached
     if (_state == Idle)
     {
         // Check next target
@@ -391,6 +267,122 @@ void elevator::run_elevator()
         }
     }
     pthread_mutex_unlock(&_mon_lock);
+}
+
+void elevator::handle_command(command cmd)
+{
+    if (cmd.type == FloorButton)
+    {
+        bool ok_command = true;
+        if(_extreme_direction == MotorStop)
+        {
+            if(cmd.desc.fbp.type == GoingUp)
+                _extreme_direction = MotorUp;
+            else
+                _extreme_direction = MotorDown;
+        }
+        else if(_extreme_direction == MotorDown)
+        {
+            if(cmd.desc.fbp.type != GoingDown)
+            {
+                std::cerr << "FAULTY FLOOR BUTTON PRESS!" << std::endl <<
+                    "Tried to go up and elevator is going down" << std::endl;
+                ok_command = false;
+            }
+        }
+        else if(_extreme_direction == MotorUp)
+        {
+            if(cmd.desc.fbp.type != GoingUp)
+            {
+                std::cerr << "FAULTY FLOOR BUTTON PRESS!" << std::endl <<
+                    "Tried to go down and elevator is going up" << std::endl;
+                ok_command = false;
+            }
+        }
+        if(ok_command && std::find(_targets.begin(), _targets.end(), cmd.desc.fbp.floor) == _targets.end())
+        {
+            if(_direction != MotorStop)
+            {
+                _targets.push_back(_current_target);
+            }
+            _targets.push_back(cmd.desc.fbp.floor);
+            if(_direction == MotorDown)
+            {
+                //std::sort(_targets.begin(), _targets.end(), std::greater<int>());
+                std::sort(_targets.begin(), _targets.end());
+                std::reverse(_targets.begin(), _targets.end());
+            }
+            else if(_direction == MotorUp)
+            {
+                std::sort(_targets.begin(), _targets.end());
+            }
+            else
+            {
+                std::sort(_targets.begin(), _targets.end());
+            }
+            _current_target = _targets.front();
+            if(_direction != MotorStop)
+            {
+                _targets.erase(_targets.begin());
+            }
+        }
+    }
+    else if (cmd.type == CabinButton)
+    {
+        bool ok_command = true;
+        if(_extreme_direction == MotorStop)
+        {
+            if((double) cmd.desc.cbp.floor > _position)
+                _extreme_direction = MotorUp;
+            else if((double) cmd.desc.cbp.floor < _position)
+                _extreme_direction = MotorDown;
+        }
+        else if(_extreme_direction == MotorDown)
+        {
+            if(cmd.desc.cbp.floor > _position)
+            {
+                std::cerr << "FAULTY CABIN BUTTON PRESS!" << std::endl <<
+                    "Tried to go up and elevator is going down" << std::endl;
+                ok_command = false;
+            }
+        }
+        else if(_extreme_direction == MotorUp)
+        {
+            if(cmd.desc.cbp.floor < _position)
+            {
+                std::cerr << "FAULTY CABIN BUTTON PRESS!" << std::endl <<
+                    "Tried to go down and elevator is going up" << std::endl;
+                ok_command = false;
+            }
+        }
+        if(ok_command && std::find(_targets.begin(), _targets.end(), cmd.desc.cbp.floor) == _targets.end())
+        {
+            if(_direction != MotorStop)
+            {
+                _targets.push_back(_current_target);
+            }
+            _targets.push_back(cmd.desc.cbp.floor);
+            if(_direction == MotorDown)
+            {
+                //std::sort(_targets.begin(), _targets.end(), std::greater<int>());
+                std::sort(_targets.begin(), _targets.end());
+                std::reverse(_targets.begin(), _targets.end());
+            }
+            else if(_direction == MotorUp)
+            {
+                std::sort(_targets.begin(), _targets.end());
+            }
+            else
+            {
+                std::sort(_targets.begin(), _targets.end());
+            }
+            _current_target = _targets.front();
+            if(_direction != MotorStop)
+            {
+                _targets.erase(_targets.begin());
+            }
+        }
+    }
 }
 
 double elevator::read_time()
