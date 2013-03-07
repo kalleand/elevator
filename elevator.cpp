@@ -234,10 +234,25 @@ int elevator::get_extreme_direction()
     return ret_direction;
 }
 
-bool elevator::is_schedulable()
+bool elevator::is_schedulable(FloorButtonType type)
 {
     pthread_mutex_lock(&_mon_lock);
-    bool ret_bool = _extreme_direction == _direction;
+    bool ret_bool = false;
+    if(_state == Idle)
+    {
+        ret_bool = true;
+    }
+    else if(_extreme_direction == _direction)
+    {
+        if(type == GoingUp && _direction == MotorUp)
+        {
+            ret_bool = true;
+        }
+        else if(type == GoingDown && _direction == MotorDown)
+        {
+            ret_bool = true;
+        }
+    }
     pthread_mutex_unlock(&_mon_lock);
     return ret_bool;
 }

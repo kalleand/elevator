@@ -246,7 +246,7 @@ void * scheduler(void * arguments)
                 possible_elevators.push_back(&el);
             }
             // Find elevators going in the right direction
-            else if (el.get_extreme_direction() == button.type && el.is_schedulable())
+            else if (el.is_schedulable(button.type))
             {
                 int el_position = (int) ((el.get_position() + elevator::EPSILON) / elevator::TICK);
                 if (button.type == GoingUp ? el_position <= button_press_position : el_position <= button_press_position)

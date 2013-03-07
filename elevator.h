@@ -33,7 +33,7 @@ class elevator
         int get_state();
         int get_extreme_target();
         int get_extreme_direction();
-        bool is_schedulable();
+        bool is_schedulable(FloorButtonType type);
 
         void run_elevator();
 
