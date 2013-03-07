@@ -236,22 +236,26 @@ void * scheduler(void * arguments)
         command cmd = commands_to_schedule->get_first_new_command();
         FloorButtonPressDesc button = cmd.desc.fbp;
         std::vector<elevator *> possible_elevators;
+        int button_press_position = button.floor / elevator::TICK;
         for (unsigned int i = 1; i < elevators.size(); ++i)
         {
             elevator & el = elevators[i];
             // Find idle elevators
-            if (el.get_direction() == MotorStop  && el.get_extreme_target() == el.get_scale())
+            if (el.get_state() == Idle)
             {
                 possible_elevators.push_back(&el);
             }
             // Find elevators going in the right direction
-            else if (button.type == GoingUp && el.get_direction() != MotorDown && button.floor <= el.get_extreme_target())
+            else if (el.get_extreme_direction() == button.type && el.is_schedulable())
             {
-                possible_elevators.push_back(&el);
-            }
-            else if (button.type == GoingDown && el.get_direction() != MotorUp && button.floor >= el.get_extreme_target())
-            {
-                possible_elevators.push_back(&el);
+                int el_position = (int) ((el.get_position() + elevator::EPSILON) / elevator::TICK);
+                if (button.type == GoingUp ? el_position <= button_press_position : el_position <= button_press_position)
+                {
+                    if (el.get_state() != ClosingDoor)
+                    {
+                        possible_elevators.push_back(&el);
+                    }
+                }
             }
         }
 
@@ -262,7 +266,6 @@ void * scheduler(void * arguments)
             continue;
         }
 
-        int button_press_position = button.floor / elevator::TICK;
         int best_position = std::abs( button_press_position - (int) ((best_elevator->get_position() + elevator::EPSILON) / elevator::TICK));
 
         for (auto it = possible_elevators.begin() + 1, end = possible_elevators.end(); it != end; ++it)
