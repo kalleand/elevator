@@ -88,7 +88,7 @@ int main(int argc, char ** argv)
     elevators.push_back(elevator());
     for (int i = 1; i < number_of_elevators + 1; ++i)
     {
-        elevators.push_back(elevator(i, mon));
+        elevators.push_back(elevator(i, mon, commands_to_schedule));
     }
 
     elevator_specific_updates = new std::vector<command>[number_of_elevators + 1];

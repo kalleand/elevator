@@ -1,29 +1,30 @@
 #include "elevator.h"
 
-elevator::elevator() : _command_output(nullptr), _number(0), _position(0.0), _direction(MotorStop), _extreme_direction(MotorStop), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(0), _scale(0), _state(Idle), _time(-1)
+elevator::elevator() : _command_output(nullptr), _sched_monitor(nullptr), _number(0), _position(0.0), _direction(MotorStop), _extreme_direction(MotorStop), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(0), _scale(0), _state(Idle), _time(-1)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
     pthread_cond_init(&_door_cond, nullptr);
 }
 
-elevator::elevator(int number, socket_monitor * socket_mon) : _command_output(socket_mon), _number(number),_position(0.0), _direction(MotorStop), _extreme_direction(MotorStop), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(0), _scale(0), _state(Idle), _time(-1)
+elevator::elevator(int number, socket_monitor * socket_mon, commands_to_schedule_monitor * schedule_monitor) : _command_output(socket_mon), _sched_monitor(schedule_monitor), _number(number),_position(0.0), _direction(MotorStop), _extreme_direction(MotorStop), _tick_counter(0), _unhandled_commands(), _targets(), _current_target(0), _scale(0), _state(Idle), _time(-1)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
     pthread_cond_init(&_door_cond, nullptr);
 }
 
-elevator::elevator(const elevator & source) : _command_output(source._command_output), _number(source._number),_position(source._position), _direction(source._direction), _extreme_direction(source._extreme_direction), _tick_counter(source._tick_counter), _unhandled_commands(source._unhandled_commands), _targets(source._targets), _current_target(source._current_target), _scale(source._scale), _state(source._state), _time(source._time)
+elevator::elevator(const elevator & source) : _command_output(source._command_output), _sched_monitor(source._sched_monitor), _number(source._number),_position(source._position), _direction(source._direction), _extreme_direction(source._extreme_direction), _tick_counter(source._tick_counter), _unhandled_commands(source._unhandled_commands), _targets(source._targets), _current_target(source._current_target), _scale(source._scale), _state(source._state), _time(source._time)
 {
     _mon_lock = source._mon_lock;
     _door_cond = source._door_cond;
 }
 
-elevator::elevator(elevator && source) : _command_output(source._command_output), _number(source._number),_position(source._position), _direction(source._direction), _extreme_direction(source._extreme_direction), _tick_counter(source._tick_counter), _unhandled_commands(source._unhandled_commands), _targets(source._targets), _current_target(source._current_target), _scale(source._scale), _state(source._state), _time(source._time)
+elevator::elevator(elevator && source) : _command_output(source._command_output), _sched_monitor(source._sched_monitor), _number(source._number),_position(source._position), _direction(source._direction), _extreme_direction(source._extreme_direction), _tick_counter(source._tick_counter), _unhandled_commands(source._unhandled_commands), _targets(source._targets), _current_target(source._current_target), _scale(source._scale), _state(source._state), _time(source._time)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
     pthread_cond_init(&_door_cond, nullptr);
     source._unhandled_commands.clear();
     source._command_output = nullptr;
+    source._sched_monitor = nullptr;
 }
 
 elevator::~elevator()
@@ -41,6 +42,8 @@ elevator & elevator::operator=(const elevator & source)
         _extreme_direction = source._extreme_direction;
         _unhandled_commands = source._unhandled_commands;
         _targets = source._targets;
+        _sched_monitor = source._sched_monitor;
+        _command_output = source._command_output;
     }
     return *this;
 }
@@ -56,8 +59,11 @@ elevator & elevator::operator=(elevator && source)
         _extreme_direction = source._extreme_direction;
         _unhandled_commands = source._unhandled_commands;
         _targets = source._targets;
+        _sched_monitor = source._sched_monitor;
+        _command_output = source._command_output;
         source._unhandled_commands.clear();
         source._command_output = nullptr;
+        source._sched_monitor = nullptr;
     }
     return *this;
 }

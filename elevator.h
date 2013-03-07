@@ -5,6 +5,7 @@
 #include "hardwareAPI.h"
 #include "command.h"
 #include "socket_monitor.h"
+#include "commands_to_schedule_monitor.h"
 #include <cmath>
 #include <pthread.h>
 #include <algorithm>
@@ -16,7 +17,7 @@ class elevator
 {
     public:
         elevator();
-        explicit elevator(int number, socket_monitor * socket_mon);
+        explicit elevator(int number, socket_monitor * socket_mon, commands_to_schedule_monitor * schedule_monitor);
         elevator(const elevator & source);
         elevator(elevator && source);
         ~elevator();
@@ -46,6 +47,7 @@ class elevator
         pthread_mutex_t _mon_lock;
         pthread_cond_t _door_cond;
         socket_monitor * _command_output;
+        commands_to_schedule_monitor * _sched_monitor;
         int _number;
         double _position;
         int _direction;
