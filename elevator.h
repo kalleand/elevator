@@ -30,6 +30,7 @@ class elevator
         int get_direction();
         void add_command(command new_command);
         int get_scale();
+        int get_state();
         int get_extreme_target();
         int get_extreme_direction();
         bool is_schedulable();

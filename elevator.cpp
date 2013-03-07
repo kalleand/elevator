@@ -165,6 +165,12 @@ void elevator::set_position(double position)
                     _state = Idle;
                     _direction = MotorStop;
                     _extreme_direction = MotorStop;
+                    command * cmd = _sched_monitor->get_first_command_not_fitted();
+                    if(cmd != nullptr)
+                    {
+                        _unhandled_commands.push_back(*cmd);
+                        delete cmd;
+                    }
                     // TODO Check for unschedueled FB commands
                 }
             }
@@ -202,6 +208,14 @@ int elevator::get_scale()
     int ret_scale = _scale;
     pthread_mutex_unlock(&_mon_lock);
     return ret_scale;
+}
+
+int elevator::get_state()
+{
+    pthread_mutex_lock(&_mon_lock);
+    int ret_state = _state;
+    pthread_mutex_unlock(&_mon_lock);
+    return ret_state;
 }
 
 int elevator::get_extreme_target()
