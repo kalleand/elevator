@@ -10,6 +10,8 @@
 #include "socket_monitor.h"
 #include "command.h"
 
+#define DEBUG
+
 #ifndef NUMBER_OF_ELEVATORS
 #define NUMBER_OF_ELEVATORS 3
 #endif
@@ -187,7 +189,9 @@ void * handle_elevator(void * input)
         pthread_mutex_lock(&position_updates_locks[elevator_number]);
         if (position_updates[elevator_number].size() > 0)
         {
+#ifdef DEBUG
             assert(position_updates[elevator_number].size() == 1);
+#endif
             for (auto it = position_updates[elevator_number].begin(), end = position_updates[elevator_number].end(); it != end; ++it)
             {
                 elevators[elevator_number].set_position(*it);
@@ -222,13 +226,26 @@ void schedule_floor_button_press(command cmd)
             possible_elevators.push_back(&el);
         }
     }
-/*    std::sort(possible_elevators.begin(), possible_elevators.end(), [&] (elevator * const e1, elevator * const e2)
-            {
-                if (e1->get_direction() == MotorStop)
-                {
 
-                }
-                return true;
-            });*/
-    elevators[1].add_command(cmd);
+    elevator * best_elevator = possible_elevators.size() > 0 ? possible_elevators[0] : nullptr;
+    if (best_elevator == nullptr)
+    {
+        // Add to queue of commands not given to any elevator.
+        return;
+    }
+
+    int button_press_position = button.floor / elevator::TICK;
+    int best_position = std::abs(button_press_position - (int) ((best_elevator->get_position() + elevator::EPSILON) / elevator::TICK));
+
+    for (auto it = possible_elevators.begin() + 1, end = possible_elevators.end(); it != end; ++it)
+    {
+        int elevator_position_relative_button_press = std::abs(button_press_position - (int) (((*it)->get_position() + elevator::EPSILON) / elevator::TICK));
+
+        if (elevator_position_relative_button_press < best_position)
+        {
+            best_position = elevator_position_relative_button_press;
+            best_elevator = *it;
+        }
+    }
+    best_elevator->add_command(cmd);
 }
