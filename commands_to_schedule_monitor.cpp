@@ -27,7 +27,7 @@ command * commands_to_schedule_monitor::get_first_command_not_fitted()
 {
     pthread_mutex_lock(&_lock);
     command * ret_cmd = nullptr;
-    if (_new_commands.size() > 0)
+    if (_commands_not_yet_scheduled.size() > 0)
     {
         ret_cmd = new command(_commands_not_yet_scheduled.front());
         _commands_not_yet_scheduled.erase(_commands_not_yet_scheduled.begin());
