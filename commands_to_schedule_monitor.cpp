@@ -40,7 +40,7 @@ std::vector<command *> commands_to_schedule_monitor::get_more_unfitted_commands(
 {
     pthread_mutex_lock(&_lock);
     std::vector<command *> more_commands;
-    for (int i = 0; i < _commands_not_yet_scheduled.size();)
+    for (unsigned int i = 0; i < _commands_not_yet_scheduled.size();)
     {
         command & current_cmd = _commands_not_yet_scheduled[i];
         if (current_cmd.desc.fbp.type == cmd->desc.fbp.type)
