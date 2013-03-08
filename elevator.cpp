@@ -331,10 +331,22 @@ void elevator::handle_command(command cmd)
         bool ok_command = true;
         if(_extreme_direction == MotorStop)
         {
+            if((double) cmd.desc.fbp.floor > _position)
+            {
+                _direction = MotorUp;
+            }
+            else if((double) cmd.desc.fbp.floor < _position)
+            {
+                _direction = MotorDown;
+            }
             if(cmd.desc.fbp.type == GoingUp)
+            {
                 _extreme_direction = MotorUp;
+            }
             else
+            {
                 _extreme_direction = MotorDown;
+            }
         }
         else if(_extreme_direction == MotorDown)
         {
@@ -368,9 +380,7 @@ void elevator::handle_command(command cmd)
             _targets.push_back(std::pair<int, EventType>(cmd.desc.fbp.floor, cmd.type));
             if(_direction == MotorDown)
             {
-                //std::sort(_targets.begin(), _targets.end(), std::greater<int>());
                 std::sort(_targets.begin(), _targets.end(), compare_pairs_desc);
-                //std::reverse(_targets.begin(), _targets.end());
             }
             else if(_direction == MotorUp)
             {
@@ -412,9 +422,15 @@ void elevator::handle_command(command cmd)
         if(_extreme_direction == MotorStop)
         {
             if((double) cmd.desc.cbp.floor > _position)
+            {
+                _direction = MotorUp;
                 _extreme_direction = MotorUp;
+            }
             else if((double) cmd.desc.cbp.floor < _position)
+            {
+                _direction = MotorDown;
                 _extreme_direction = MotorDown;
+            }
         }
         else if(_extreme_direction == MotorDown)
         {
@@ -448,9 +464,7 @@ void elevator::handle_command(command cmd)
             _targets.push_back(std::pair<int, EventType>(cmd.desc.cbp.floor, cmd.type));
             if(_direction == MotorDown)
             {
-                //std::sort(_targets.begin(), _targets.end(), std::greater<int>());
                 std::sort(_targets.begin(), _targets.end(), compare_pairs_desc);
-                //std::reverse(_targets.begin(), _targets.end());
             }
             else if(_direction == MotorUp)
             {
@@ -484,6 +498,10 @@ bool elevator::_is_schedulable(FloorButtonType type) const
             ret_bool = true;
         }
         else if(type == GoingDown && _direction == MotorDown)
+        {
+            ret_bool = true;
+        }
+        else if(_extreme_direction == MotorStop)
         {
             ret_bool = true;
         }
