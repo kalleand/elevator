@@ -14,6 +14,9 @@
 
 #define DEBUG
 
+int int_floors;
+double double_floors;
+
 void * read_thread(void *);
 void * handle_elevator(void *);
 void * scheduler(void *);
@@ -37,13 +40,14 @@ int main(int argc, char ** argv)
         return 0;
     }
     int number_of_elevators = atoi(argv[1]);
-    int floors = atoi(argv[2]);
-    if (number_of_elevators < 1 || floors < 1)
+    int_floors = atoi(argv[2]);
+    if (number_of_elevators < 1 || int_floors < 1)
     {
         std::cout << "There has to be at least one elevator and one floor" << std::endl;
         std::cout << "Usage: " << argv[0] << " elevators floors [host-name] [port]" << std::endl;
         return 0;
     }
+    double_floors = (double) int_floors;
 
     std::string hostname = "127.0.0.1";
     int port = 4711;
