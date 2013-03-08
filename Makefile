@@ -29,7 +29,7 @@ test-hwAPI.out: test-hwAPI.c $(OFILES)
 	$(CPP) -o $@ $< $(OFILES) $(CFLAGS)
 
 run: main.out
-	export NUMBER_OF_ELEVATORS=$(ELEVATORS)  && ./$< 127.0.0.1 4711
+	./$< $(ELEVATORS) $(FLOORS) 127.0.0.1 4711
 
 runtest: test-hwAPI.out
 	./$< 127.0.0.1 4711
