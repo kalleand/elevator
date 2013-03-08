@@ -1,10 +1,8 @@
-#ifndef __ELEVATOR_MONITOR
-#define __ELEVATOR_MONITOR
+#ifndef __ELEVATOR_SOCKET_MONITOR
+#define __ELEVATOR_SOCKET_MONITOR
 
 #include "hardwareAPI.h"
 #include <pthread.h>
-
-#include <iostream>
 
 #define EMERGENCY_STOP 32000
 

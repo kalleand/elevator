@@ -11,7 +11,6 @@
 #include <pthread.h>
 #include <algorithm>
 #include <sys/time.h>
-
 #include <iostream>
 
 extern int int_floors;

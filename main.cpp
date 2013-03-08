@@ -1,11 +1,10 @@
 #include <algorithm>
-#include <assert.h>
 #include <iostream>
 #include <cstdlib>
-#include <cstring>
 #include <string>
 #include <vector>
 #include <utility>
+#include <pthread.h>
 #include "hardwareAPI.h"
 #include "elevator.h"
 #include "socket_monitor.h"

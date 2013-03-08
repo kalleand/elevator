@@ -1,12 +1,5 @@
-/*
- * commands_to_schedule_monitor.h
- *
- *  Created on: 7 mar 2013
- *      Author: josefsunesson
- */
-
-#ifndef COMMANDS_TO_SCHEDULE_MONITOR_H_
-#define COMMANDS_TO_SCHEDULE_MONITOR_H_
+#ifndef __ELEVATOR_COMMANDS_TO_SCHEDULE_MONITOR
+#define __ELEVATOR_COMMANDS_TO_SCHEDULE_MONITOR
 
 #include <vector>
 #include "command.h"
