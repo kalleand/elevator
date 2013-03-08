@@ -5,6 +5,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <utility>
 #include "hardwareAPI.h"
 #include "elevator.h"
 #include "socket_monitor.h"
@@ -235,50 +236,49 @@ void * scheduler(void * arguments)
     {
         command cmd = commands_to_schedule->get_first_new_command();
         FloorButtonPressDesc button = cmd.desc.fbp;
-        std::vector<elevator *> possible_elevators;
-        int button_press_position = button.floor / elevator::TICK;
+        std::vector<std::pair<elevator *, int>> possible_elevators;
         for (unsigned int i = 1; i < elevators.size(); ++i)
         {
             elevator & el = elevators[i];
-            // Find idle elevators
-            if (el.get_state() == Idle)
+            int position = el.absolut_position_relative(button);
+
+            if (position != -1)
             {
-                possible_elevators.push_back(&el);
-            }
-            // Find elevators going in the right direction
-            else if (el.is_schedulable(button.type))
-            {
-                int el_position = (int) ((el.get_position() + elevator::EPSILON) / elevator::TICK);
-                if (button.type == GoingUp ? el_position <= button_press_position : el_position <= button_press_position)
-                {
-                    if (el.get_state() != ClosingDoor)
-                    {
-                        possible_elevators.push_back(&el);
-                    }
-                }
+                possible_elevators.push_back(std::pair<elevator *,int>(&el,position));
             }
         }
 
-        elevator * best_elevator = possible_elevators.size() > 0 ? possible_elevators[0] : nullptr;
-        if (best_elevator == nullptr)
+        if (possible_elevators.size() == 0)
         {
             commands_to_schedule->add_command_not_possible_to_schedule(cmd);
             continue;
         }
 
-        int best_position = std::abs( button_press_position - (int) ((best_elevator->get_position() + elevator::EPSILON) / elevator::TICK));
-
-        for (auto it = possible_elevators.begin() + 1, end = possible_elevators.end(); it != end; ++it)
+        if (possible_elevators.size() > 1)
         {
-            int elevator_position_relative_button_press = std::abs( button_press_position - (int) (((*it)->get_position() + elevator::EPSILON) / elevator::TICK));
+            std::sort(possible_elevators.begin(), possible_elevators.end(),
+                    [] (std::pair<elevator *,int> e1, std::pair<elevator *,int> e2)
+                    {
+                        return e1.second < e2.second;
+                    });
+        }
 
-            if (elevator_position_relative_button_press < best_position)
+        bool press_scheduled = false;
+        for (auto it = possible_elevators.begin(), end = possible_elevators.end(); it != end; ++it)
+        {
+            elevator * best_elevator = it->first;
+            if (best_elevator->is_schedulable(button.type))
             {
-                best_position = elevator_position_relative_button_press;
-                best_elevator = *it;
+                best_elevator->add_command(cmd);
+                press_scheduled = true;
+                break;
             }
         }
-        best_elevator->add_command(cmd);
+
+        if (!press_scheduled)
+        {
+            commands_to_schedule->add_command_not_possible_to_schedule(cmd);
+        }
     }
     return nullptr;
 }
