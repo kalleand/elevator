@@ -237,25 +237,25 @@ int elevator::get_extreme_direction()
 bool elevator::is_schedulable(FloorButtonType type)
 {
     pthread_mutex_lock(&_mon_lock);
-    bool ret_bool = false;
-    if(_state == Idle)
-    {
-        ret_bool = true;
-    }
-    else if(_extreme_direction == _direction)
-    {
-        if(type == GoingUp && _direction == MotorUp)
-        {
-            ret_bool = true;
-        }
-        else if(type == GoingDown && _direction == MotorDown)
-        {
-            ret_bool = true;
-        }
-    }
+    bool ret_bool = _is_schedulable(type);
     pthread_mutex_unlock(&_mon_lock);
     return ret_bool;
 }
+
+int elevator::absolut_position_relative(FloorButtonPressDesc button)
+{
+    int button_press_position = button.floor / elevator::TICK;
+
+    if (_is_schedulable(button.type))
+    {
+        return std::abs(button_press_position - (int) ((_position + elevator::EPSILON) / elevator::TICK));
+    }
+    else
+    {
+        return -1;
+    }
+}
+
 void elevator::run_elevator()
 {
     pthread_mutex_lock(&_mon_lock);
@@ -421,6 +421,27 @@ void elevator::handle_command(command cmd)
             }
         }
     }
+}
+
+bool elevator::_is_schedulable(FloorButtonType type) const
+{
+    bool ret_bool = false;
+    if(_state == Idle)
+    {
+        ret_bool = true;
+    }
+    else if(_extreme_direction == _direction)
+    {
+        if(type == GoingUp && _direction == MotorUp)
+        {
+            ret_bool = true;
+        }
+        else if(type == GoingDown && _direction == MotorDown)
+        {
+            ret_bool = true;
+        }
+    }
+    return ret_bool;
 }
 
 double elevator::read_time()

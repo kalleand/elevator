@@ -34,6 +34,7 @@ class elevator
         int get_extreme_target();
         int get_extreme_direction();
         bool is_schedulable(FloorButtonType type);
+        int absolut_position_relative(FloorButtonPressDesc button);
 
         void run_elevator();
 
@@ -43,6 +44,7 @@ class elevator
     private:
         double read_time();
         void handle_command(command cmd);
+        bool _is_schedulable(FloorButtonType type) const;
 
         static constexpr double TIME_LIMIT = 2.5;
 
