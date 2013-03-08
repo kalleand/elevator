@@ -248,12 +248,13 @@ int elevator::absolut_position_relative(FloorButtonPressDesc button)
 
     if (_is_schedulable(button.type))
     {
-        return std::abs(button_press_position - (int) ((_position + elevator::EPSILON) / elevator::TICK));
+        int elevator_position = (int) ((_position + elevator::EPSILON) / elevator::TICK);
+        if (_state == Idle || button.type == GoingUp ? button_press_position >= elevator_position : button_press_position <= elevator_position)
+        {
+            return std::abs(button_press_position - elevator_position);
+        }
     }
-    else
-    {
-        return -1;
-    }
+    return -1;
 }
 
 void elevator::run_elevator()
