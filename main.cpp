@@ -264,12 +264,15 @@ void * scheduler(void * arguments)
         for (auto it = possible_elevators.begin(), end = possible_elevators.end(); it != end; ++it)
         {
             elevator * best_elevator = it->first;
-            if (best_elevator->is_schedulable(button.type))
+            pthread_mutex_lock(&elevator_updates_locks[best_elevator->get_number()]);
+            if (best_elevator->absolut_position_relative(button) >= 0)
             {
                 best_elevator->add_command(cmd);
+                pthread_mutex_unlock(&elevator_updates_locks[best_elevator->get_number()]);
                 press_scheduled = true;
                 break;
             }
+            pthread_mutex_unlock(&elevator_updates_locks[best_elevator->get_number()]);
         }
 
         if (!press_scheduled)
