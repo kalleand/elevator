@@ -78,26 +78,18 @@ void elevator::set_position(double position)
     if(_state == Moving)
     {
         double tmp_pos = position;
-        bool is_extreme = false;
-        if(std::abs(tmp_pos - TICK) < EPSILON || std::abs(5.0 - tmp_pos - TICK) < EPSILON)
+        bool is_end_point = false;
+        if(std::abs(tmp_pos - TICK) < EPSILON && _direction == MotorDown)
         {
-            if(_direction == MotorUp)
-            {
-                is_extreme = true;
-                _position = 5;
-                tmp_pos += TICK;
-            }
-            else if( _direction == MotorDown)
-            {
-                is_extreme = true;
-                _position = 0;
-                tmp_pos -= TICK;
-            }
-            else // _direction == MotorStop
-            {
-                // HOW THE FUCK DID THIS HAPPEN?!
-                // moving elevator and the motor is stopped?
-            }
+            is_end_point = true;
+            _position = 0;
+            tmp_pos = 0;
+        }
+        else if(std::abs(5.0 - tmp_pos - TICK) < EPSILON && _direction == MotorUp)
+        {
+            is_end_point = true;
+            _position = 5;
+            tmp_pos = 5;
         }
         tmp_pos += EPSILON;
 
@@ -105,9 +97,13 @@ void elevator::set_position(double position)
         {
             if((int) tmp_pos == _current_target)
             {
+                if(_direction != _extreme_direction)
+                {
+                    // TODO Get more commands from unscheduled.
+                }
                 _direction = MotorStop;
-                /*if(is_extreme || _targets.size() == 0)
-                    _extreme_direction = MotorStop;*/
+                if(is_end_point)
+                    _extreme_direction = MotorStop;
                 _state = OpeningDoor;
                 _command_output->setMotor(_number, MotorStop);
                 _command_output->setDoor(_number, DoorOpen);
@@ -349,7 +345,7 @@ void elevator::handle_command(command cmd)
         if(ok_command && std::find_if(_targets.begin(), _targets.end(),
                     [&] (const std::pair<int, EventType> & comp)
                     {
-                        return comp.first == cmd.desc.fbp.floor;
+                    return comp.first == cmd.desc.fbp.floor;
                     }
                     ) == _targets.end())
         {
@@ -398,7 +394,7 @@ void elevator::handle_command(command cmd)
                     _sched_monitor->add_command_not_possible_to_schedule(command(p.second, tmp_event));
                 }
             }
-            // TODO reschedule.
+            return;
         }
         bool ok_command = true;
         if(_extreme_direction == MotorStop)
@@ -429,7 +425,7 @@ void elevator::handle_command(command cmd)
         if(ok_command && std::find_if(_targets.begin(), _targets.end(),
                     [&] (const std::pair<int, EventType> & comp)
                     {
-                        return comp.first == cmd.desc.cbp.floor;
+                    return comp.first == cmd.desc.cbp.floor;
                     }
                     ) == _targets.end())
         {
