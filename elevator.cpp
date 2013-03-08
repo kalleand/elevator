@@ -106,8 +106,8 @@ void elevator::set_position(double position)
             if((int) tmp_pos == _current_target)
             {
                 _direction = MotorStop;
-                if(is_extreme)
-                    _extreme_direction = MotorStop;
+                /*if(is_extreme || _targets.size() == 0)
+                    _extreme_direction = MotorStop;*/
                 _state = OpeningDoor;
                 _command_output->setMotor(_number, MotorStop);
                 _command_output->setDoor(_number, DoorOpen);
@@ -250,13 +250,14 @@ bool elevator::is_schedulable(FloorButtonType type)
 
 int elevator::absolut_position_relative(FloorButtonPressDesc button)
 {
-    int button_press_position = button.floor / elevator::TICK;
-
+    int button_press_position = button.floor / elevator::TICK; 
     if (_is_schedulable(button.type))
     {
+        std::cout << "Elevator " << _number << " is schedulable. State is idle? "<< (_state == Idle) << std::endl;
         int elevator_position = (int) ((_position + elevator::EPSILON) / elevator::TICK);
-        if (_state == Idle || button.type == GoingUp ? button_press_position >= elevator_position : button_press_position <= elevator_position)
+        if (_state == Idle || (button.type == GoingUp ? button_press_position >= elevator_position : button_press_position <= elevator_position))
         {
+            std::cout << "Elevator " << _number << " gets score of " << std::abs(button_press_position - elevator_position) << std::endl;
             return std::abs(button_press_position - elevator_position);
         }
     }
@@ -387,6 +388,16 @@ void elevator::handle_command(command cmd)
             _state = EmergencyStop;
             _direction = MotorStop;
             _command_output->setMotor(_number, MotorStop);
+            _targets.push_back(std::pair<int, EventType>(_current_target, _type));
+            for(std::pair<int, EventType> p : _targets)
+            {
+                if(p.second == FloorButton)
+                {
+                    FloorButtonPressDesc tmp_fbpd = {p.first, (_extreme_direction == MotorUp) ? GoingUp : GoingDown};
+                    EventDesc tmp_event = {tmp_fbpd};
+                    _sched_monitor->add_command_not_possible_to_schedule(command(p.second, tmp_event));
+                }
+            }
             // TODO reschedule.
         }
         bool ok_command = true;
