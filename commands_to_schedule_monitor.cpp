@@ -45,9 +45,9 @@ std::vector<command *> commands_to_schedule_monitor::get_more_unfitted_commands(
         command & current_cmd = _commands_not_yet_scheduled[i];
         if (current_cmd.desc.fbp.type == cmd->desc.fbp.type)
         {
-            if (cmd->desc.fbp.floor < position)
+            if ((cmd->desc.fbp.floor / 0.04) < position)
             {
-                if (current_cmd.desc.fbp.type == GoingDown)
+                if (current_cmd.desc.fbp.type == GoingDown && (current_cmd.desc.fbp.floor / 0.04) < position)
                 {
                     more_commands.push_back(new command(current_cmd));
                     _commands_not_yet_scheduled.erase(_commands_not_yet_scheduled.begin() + i);
@@ -61,9 +61,9 @@ std::vector<command *> commands_to_schedule_monitor::get_more_unfitted_commands(
 //                    }
                 }
             }
-            else if (cmd->desc.fbp.floor > position)
+            else if ((cmd->desc.fbp.floor / 0.04) > position)
             {
-                if (current_cmd.desc.fbp.type == GoingUp)
+                if (current_cmd.desc.fbp.type == GoingUp && (current_cmd.desc.fbp.floor / 0.04) > position)
                 {
                     more_commands.push_back(new command(current_cmd));
                     _commands_not_yet_scheduled.erase(_commands_not_yet_scheduled.begin() + i);
@@ -81,7 +81,7 @@ std::vector<command *> commands_to_schedule_monitor::get_more_unfitted_commands(
         ++i;
     }
     pthread_mutex_unlock(&_lock);
-    return std::move(more_commands);
+    return more_commands;
 }
 
 void commands_to_schedule_monitor::add_new_command_to_schedule(const command & cmd)
