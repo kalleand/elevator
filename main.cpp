@@ -14,10 +14,6 @@
 
 #define DEBUG
 
-#ifndef NUMBER_OF_ELEVATORS
-#define NUMBER_OF_ELEVATORS 3
-#endif
-
 void * read_thread(void *);
 void * handle_elevator(void *);
 void * scheduler(void *);
@@ -36,28 +32,37 @@ bool done = false;
 
 int main(int argc, char ** argv)
 {
-    if (argc > 3) {
-        std::cout << "Usage: " << argv[0] << " [host-name] [port]" << std::endl;
+    if (argc > 5 || argc < 3) {
+        std::cout << "Usage: " << argv[0] << " elevators floors [host-name] [port]" << std::endl;
         return 0;
     }
+    int number_of_elevators = atoi(argv[1]);
+    int floors = atoi(argv[2]);
+    if (number_of_elevators < 1 || floors < 1)
+    {
+        std::cout << "There has to be at least one elevator and one floor" << std::endl;
+        std::cout << "Usage: " << argv[0] << " elevators floors [host-name] [port]" << std::endl;
+        return 0;
+    }
+
     std::string hostname = "127.0.0.1";
     int port = 4711;
-    if (argc == 3)
+    if (argc == 5)
     {
-        hostname = argv[1];
-        port = atoi(argv[2]);
+        hostname = argv[3];
+        port = atoi(argv[4]);
         if (port < 1 || port > 65535)
         {
-            std::cout << argv[2] << " is not a valid portnumber" << std::endl;
+            std::cout << argv[4] << " is not a valid portnumber" << std::endl;
             return 0;
         }
     }
-    else if (argc == 2)
+    else if (argc == 4)
     {
-        int tmp_port = atoi(argv[1]);
+        int tmp_port = atoi(argv[3]);
         if (tmp_port == 0)
         {
-            hostname = argv[1];
+            hostname = argv[3];
         }
         else
         {
@@ -76,16 +81,6 @@ int main(int argc, char ** argv)
     mon = new socket_monitor();
     commands_to_schedule = new commands_to_schedule_monitor();
 
-    char * number_of_elevators_char = getenv("NUMBER_OF_ELEVATORS");
-    int number_of_elevators = NUMBER_OF_ELEVATORS;
-    if (number_of_elevators_char != nullptr)
-    {
-        number_of_elevators = atoi(number_of_elevators_char);
-        if (number_of_elevators == 0)
-        {
-            number_of_elevators = NUMBER_OF_ELEVATORS;
-        }
-    }
     elevators.push_back(elevator());
     for (int i = 1; i < number_of_elevators + 1; ++i)
     {
