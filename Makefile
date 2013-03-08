@@ -20,13 +20,21 @@ hardwareAPI.o: hardwareAPI.c hardwareAPI.h
 	$(CPP) -c $<
 
 %.o: %.cpp %.h
+ifndef DEBUG
 	$(CPP) -c $<
+else
+	$(CPP) -c $< -D DEBUG
+endif
 
 test-hwAPI.out: test-hwAPI.c $(OFILES)
 	$(CPP) -o $@ $< $(OFILES) $(CFLAGS)
 
 %.out: %.cpp $(OFILES)
+ifndef DEBUG
 	$(CPP) -o $@ $< $(OFILES) $(CFLAGS)
+else
+	$(CPP) -o $@ $< $(OFILES) $(CFLAGS) -D DEBUG
+endif
 
 run: main.out
 	./$< $(ELEVATORS) $(FLOORS) 127.0.0.1 4711
