@@ -9,6 +9,7 @@
 #define COMMANDS_TO_SCHEDULE_MONITOR_H_
 
 #include <vector>
+#include <utility>
 #include "command.h"
 #include <pthread.h>
 
@@ -20,6 +21,7 @@ class commands_to_schedule_monitor
 
         command get_first_new_command();
         command * get_first_command_not_fitted();
+        std::vector<command *> get_more_unfitted_commands(int position, command * cmd);
         void add_new_command_to_schedule(const command & cmd);
         void add_command_not_possible_to_schedule(const command & cmd);
     private:

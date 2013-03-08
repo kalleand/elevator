@@ -36,6 +36,54 @@ command * commands_to_schedule_monitor::get_first_command_not_fitted()
     return ret_cmd;
 }
 
+std::vector<command *> commands_to_schedule_monitor::get_more_unfitted_commands(int position, command * cmd)
+{
+    pthread_mutex_lock(&_lock);
+    std::vector<command *> more_commands;
+    for (int i = 0; i < _commands_not_yet_scheduled.size();)
+    {
+        command & current_cmd = _commands_not_yet_scheduled[i];
+        if (current_cmd.desc.fbp.type == cmd->desc.fbp.type)
+        {
+            if (cmd->desc.fbp.floor < position)
+            {
+                if (current_cmd.desc.fbp.type == GoingDown)
+                {
+                    more_commands.push_back(new command(current_cmd));
+                    _commands_not_yet_scheduled.erase(_commands_not_yet_scheduled.begin() + i);
+                    continue;
+                }
+                else
+                {
+//                    if (current_cmd.desc.fbp.floor >= cmd->desc.fbp.floor)
+//                    {
+//
+//                    }
+                }
+            }
+            else if (cmd->desc.fbp.floor > position)
+            {
+                if (current_cmd.desc.fbp.type == GoingUp)
+                {
+                    more_commands.push_back(new command(current_cmd));
+                    _commands_not_yet_scheduled.erase(_commands_not_yet_scheduled.begin() + i);
+                    continue;
+                }
+                else
+                {
+//                    if (current_cmd.desc.fbp.floor <= cmd->desc.fbp.floor)
+//                    {
+//
+//                    }
+                }
+            }
+        }
+        ++i;
+    }
+    pthread_mutex_unlock(&_lock);
+    return std::move(more_commands);
+}
+
 void commands_to_schedule_monitor::add_new_command_to_schedule(const command & cmd)
 {
     pthread_mutex_lock(&_lock);
