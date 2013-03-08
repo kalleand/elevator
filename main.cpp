@@ -160,7 +160,9 @@ void * read_thread(void * input)
                 fflush(stdout);
                 pthread_mutex_unlock(&mutex);
 #endif
+                pthread_mutex_lock(&elevator_updates_locks[ed.cp.cabin]);
                 elevator_specific_updates[ed.cbp.cabin].push_back(tmp);
+                pthread_mutex_unlock(&elevator_updates_locks[ed.cp.cabin]);
                 break;
 
             case Position:
