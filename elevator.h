@@ -2,6 +2,7 @@
 #define __ELEVATOR_ELEVATOR
 
 #include <vector>
+#include <utility>
 #include "hardwareAPI.h"
 #include "command.h"
 #include "socket_monitor.h"
@@ -57,11 +58,12 @@ class elevator
         int _direction;
         int _extreme_direction;
         int _tick_counter;
-        std::vector<int> _targets;
+        std::vector<std::pair<int, EventType>> _targets;
         int _current_target;
         int _scale;
         int _state;
         double _time;
+        EventType _type;
 };
 
 #endif

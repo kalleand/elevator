@@ -83,7 +83,8 @@ typedef enum
     Moving,
     OpeningDoor,
     OpenDoor,
-    ClosingDoor
+    ClosingDoor,
+    EmergencyStop
 } State;
 
 //
