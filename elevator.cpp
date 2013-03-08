@@ -85,11 +85,11 @@ void elevator::set_position(double position)
             _position = 0;
             tmp_pos = 0;
         }
-        else if(std::abs(5.0 - tmp_pos - TICK) < EPSILON && _direction == MotorUp)
+        else if(std::abs(double_floors - tmp_pos - TICK) < EPSILON && _direction == MotorUp)
         {
             is_end_point = true;
-            _position = 5;
-            tmp_pos = 5;
+            _position = int_floors;
+            tmp_pos = int_floors;
         }
         tmp_pos += EPSILON;
 
@@ -167,6 +167,12 @@ void elevator::set_position(double position)
                     if(cmd != nullptr)
                     {
                         handle_command(*cmd);
+                        std::vector<command *> more_commands = _sched_monitor->get_more_unfitted_commands(_scale / elevator::TICK, cmd);
+                        for (auto it = more_commands.begin(), end = more_commands.end(); it != end; ++it)
+                        {
+                            handle_command(*(*it));
+                            delete *it;
+                        }
                         delete cmd;
                     }
                     // TODO Check for unschedueled FB commands
@@ -297,6 +303,12 @@ void elevator::run_elevator()
             if(cmd != nullptr)
             {
                 handle_command(*cmd);
+                std::vector<command *> more_commands = _sched_monitor->get_more_unfitted_commands(_scale / elevator::TICK, cmd);
+                for (auto it = more_commands.begin(), end = more_commands.end(); it != end; ++it)
+                {
+                    handle_command(*(*it));
+                    delete *it;
+                }
                 delete cmd;
             }
         }

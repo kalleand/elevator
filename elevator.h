@@ -14,6 +14,9 @@
 
 #include <iostream>
 
+extern int int_floors;
+extern double double_floors;
+
 class elevator
 {
     public:
