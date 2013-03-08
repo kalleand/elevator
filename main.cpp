@@ -12,8 +12,6 @@
 #include "command.h"
 #include "commands_to_schedule_monitor.h"
 
-#define DEBUG
-
 int int_floors;
 double double_floors;
 
@@ -126,7 +124,6 @@ int main(int argc, char ** argv)
     delete mon;
     delete commands_to_schedule;
 
-    std::cout << "Hejsan!" << std::endl;
     terminate();
     return 0;
 }

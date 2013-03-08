@@ -97,10 +97,6 @@ void elevator::set_position(double position)
         {
             if((int) tmp_pos == _current_target)
             {
-                if(_direction != _extreme_direction)
-                {
-                    // TODO Get more commands from unscheduled.
-                }
                 _direction = MotorStop;
                 if(is_end_point)
                     _extreme_direction = MotorStop;
@@ -115,9 +111,8 @@ void elevator::set_position(double position)
     else
     {
         _tick_counter++;
-        if(_tick_counter == 4) // TODO Define four
+        if(_tick_counter == 4)
         {
-            //pthread_cond_signal()
             _tick_counter = 0;
             if(_state == OpeningDoor)
             {
@@ -175,7 +170,6 @@ void elevator::set_position(double position)
                         }
                         delete cmd;
                     }
-                    // TODO Check for unschedueled FB commands
                 }
             }
         }
@@ -255,11 +249,9 @@ int elevator::absolut_position_relative(FloorButtonPressDesc button)
     int button_press_position = button.floor / elevator::TICK; 
     if (_is_schedulable(button.type))
     {
-        std::cout << "Elevator " << _number << " is schedulable. State is idle? "<< (_state == Idle) << std::endl;
         int elevator_position = (int) ((_position + elevator::EPSILON) / elevator::TICK);
         if (_state == Idle || (button.type == GoingUp ? button_press_position >= elevator_position : button_press_position <= elevator_position))
         {
-            std::cout << "Elevator " << _number << " gets score of " << std::abs(button_press_position - elevator_position) << std::endl;
             return std::abs(button_press_position - elevator_position);
         }
     }
@@ -352,8 +344,7 @@ void elevator::handle_command(command cmd)
         {
             if(cmd.desc.fbp.type != GoingDown)
             {
-                std::cerr << "FAULTY FLOOR BUTTON PRESS!" << std::endl <<
-                    "Tried to go up and elevator is going down" << std::endl;
+                _sched_monitor->add_command_not_possible_to_schedule(cmd);
                 ok_command = false;
             }
         }
@@ -361,15 +352,14 @@ void elevator::handle_command(command cmd)
         {
             if(cmd.desc.fbp.type != GoingUp)
             {
-                std::cerr << "FAULTY FLOOR BUTTON PRESS!" << std::endl <<
-                    "Tried to go down and elevator is going up" << std::endl;
+                _sched_monitor->add_command_not_possible_to_schedule(cmd);
                 ok_command = false;
             }
         }
         if(ok_command && std::find_if(_targets.begin(), _targets.end(),
                     [&] (const std::pair<int, EventType> & comp)
                     {
-                    return comp.first == cmd.desc.fbp.floor;
+                        return comp.first == cmd.desc.fbp.floor;
                     }
                     ) == _targets.end())
         {
@@ -486,6 +476,7 @@ void elevator::handle_command(command cmd)
 
 bool elevator::_is_schedulable(FloorButtonType type) const
 {
+    if(_state == EmergencyStop) return false;
     bool ret_bool = false;
     if(_state == Idle)
     {
