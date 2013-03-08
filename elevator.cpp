@@ -69,6 +69,11 @@ elevator & elevator::operator=(elevator && source)
     return *this;
 }
 
+int elevator::get_number() const
+{
+    return _number;
+}
+
 void elevator::set_position(double position)
 {
     pthread_mutex_lock(&_mon_lock);

@@ -28,6 +28,7 @@ class elevator
         elevator & operator=(const elevator & source);
         elevator & operator=(elevator && source);
 
+        int get_number() const;
         void set_position(double position);
         double get_position();
         int get_direction();
