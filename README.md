@@ -33,3 +33,6 @@ floor and the floors are zero indexed, first one is called BV = Båttenvåning
 and subsequent are called 1,2,3...). These two parameters should be the
 same for when running the elevator and the controller.
 
+Examples:
+> ELEVATORS=2 FLOORS=3 make elevator
+> ELEVATORS=2 FLOORS=3 make
