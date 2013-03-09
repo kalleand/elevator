@@ -364,7 +364,7 @@ void elevator::handle_command(command cmd)
         if(ok_command && std::find_if(_targets.begin(), _targets.end(),
                     [&] (const std::pair<int, EventType> & comp)
                     {
-                        return comp.first == cmd.desc.fbp.floor;
+                    return comp.first == cmd.desc.fbp.floor;
                     }
                     ) == _targets.end())
         {
@@ -390,6 +390,13 @@ void elevator::handle_command(command cmd)
             if(_direction != MotorStop)
             {
                 _targets.erase(_targets.begin());
+            }
+            command tmp_cmd(_type, {FloorButtonPressDesc{_current_target, (_extreme_direction == MotorUp) ? GoingUp : GoingDown} });
+            std::vector<command *> more_commands = _sched_monitor->get_more_unfitted_commands(_scale / elevator::TICK, &tmp_cmd);
+            for (auto it = more_commands.begin(), end = more_commands.end(); it != end; ++it)
+            {
+                handle_command(*(*it));
+                delete *it;
             }
         }
     }
@@ -474,6 +481,13 @@ void elevator::handle_command(command cmd)
             if(_direction != MotorStop)
             {
                 _targets.erase(_targets.begin());
+            }
+            command tmp_cmd(FloorButton, {FloorButtonPressDesc{_current_target, (_extreme_direction == MotorUp) ? GoingUp : GoingDown} });
+            std::vector<command *> more_commands = _sched_monitor->get_more_unfitted_commands(_scale / elevator::TICK, &tmp_cmd);
+            for (auto it = more_commands.begin(), end = more_commands.end(); it != end; ++it)
+            {
+                handle_command(*(*it));
+                delete *it;
             }
         }
     }
