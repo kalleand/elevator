@@ -21,3 +21,5 @@
 .settings
 
 elevator
+*.log
+*.pdf
