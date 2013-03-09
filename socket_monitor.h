@@ -4,8 +4,11 @@
 #include "hardwareAPI.h"
 #include <pthread.h>
 
-#define EMERGENCY_STOP 32000
-
+/*
+ * Monitor wrapper for making synchronized calls to the hardware.
+ * The functions has slightly different names than the corresponding
+ * hardware calls since we wanted to avoid naming collisions.
+ */
 class socket_monitor
 {
     public:
