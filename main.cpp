@@ -211,7 +211,7 @@ void * handle_elevator(void * input)
             pthread_mutex_lock(&elevator_updates_locks[elevator_number]);
 
             command & cmd = elevator_specific_updates[elevator_number].front();
-            if (cmd.type == CabinButton)
+            if (cmd.type == CabinButton || cmd.type == FloorButton)
             {
                 elevators[elevator_number].add_command(cmd);
             }
@@ -267,7 +267,7 @@ void * scheduler(void * arguments)
             pthread_mutex_lock(&elevator_updates_locks[best_elevator->get_number()]);
             if (best_elevator->absolut_position_relative(button) >= 0)
             {
-                best_elevator->add_command(cmd);
+                elevator_specific_updates[best_elevator->get_number()].insert(elevator_specific_updates[best_elevator->get_number()].begin(), cmd);
                 pthread_mutex_unlock(&elevator_updates_locks[best_elevator->get_number()]);
                 press_scheduled = true;
                 break;
