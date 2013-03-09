@@ -103,62 +103,118 @@ int elevator::get_number() const
     return _number;
 }
 
+/*
+ * Method used to set the position of the elevator to the value given by the hardware.
+ */
 void elevator::set_position(double position)
 {
     pthread_mutex_lock(&_mon_lock);
+    /*
+     * Update the position of the elevator.
+     */
     _position = position;
 
-    // Handle scale
+    /*
+     * Position updates are only given when the elevator is moving or the doors are
+     * opening or closing.
+     */
+
     if(_state == Moving)
     {
         double tmp_pos = position;
         bool is_end_point = false;
+        /*
+         * Check if we reached the bottom floor.
+         */
         if(std::abs(tmp_pos - TICK) < EPSILON && _direction == MotorDown)
         {
             is_end_point = true;
             _position = 0;
             tmp_pos = 0;
         }
+        /*
+         * Check if we reached the top floor.
+         */
         else if(std::abs(double_floors - tmp_pos - TICK) < EPSILON && _direction == MotorUp)
         {
             is_end_point = true;
             _position = int_floors;
             tmp_pos = int_floors;
         }
+        /*
+         * Add EPSILON so that tmp_pos is guaranteed to have tipped over to the next floor
+         * in case we've got an example position update of position 1.9999999999999 which indicate
+         * that the second floor has been reached.
+         */
         tmp_pos += EPSILON;
 
+        /*
+         * If a new floor has been reached.
+         */
         if ((tmp_pos - (int) tmp_pos) < 2 * EPSILON)
         {
+            /*
+             * Check if this floor is the current target floor.
+             */
             if((int) tmp_pos == _current_target)
             {
                 _direction = MotorStop;
+                /*
+                 * If we've reached the top/bottom floor, we can't keep going up/down, so we
+                 * reset the extreme direction to be stopped.
+                 */
                 if(is_end_point)
                     _extreme_direction = MotorStop;
+                /*
+                 * We have reached the current target floor, so we stop the elevator and starts
+                 * to open the door.
+                 */
                 _state = OpeningDoor;
                 _command_output->setMotor(_number, MotorStop);
                 _command_output->setDoor(_number, DoorOpen);
             }
+            /*
+             * Update the showing scale in the elevator since a new floor has been reached.
+             */
             _scale = (int) tmp_pos;
             _command_output->setScale(_number, (int) tmp_pos);
         }
     }
+    /*
+     * Door is opening or closing.
+     */
     else
     {
+        /*
+         * Increase tick counter and if the number of ticks has reached 4, the door has either
+         * been completely opened or completely closed.
+         */
         _tick_counter++;
         if(_tick_counter == 4)
         {
+            /*
+             * Reset the tick counter.
+             */
             _tick_counter = 0;
+            /*
+             * If we're opening the door, the door is now open and we start the timer to control
+             * how long the door will stay open.
+             */
             if(_state == OpeningDoor)
             {
                 _state = OpenDoor;
                 _time = read_time();
             }
-            else if(_state == ClosingDoor)
+            else /* if(_state == ClosingDoor) */
             {
+                /*
+                 * When the door has closed, check if we have any targets to go to.
+                 */
                 if( _targets.size() > 0)
                 {
                     while(_targets.size() > 0)
                     {
+                        // TODO Comments and maybe restructure.
                         // We now want to start moving towards our next target.
                         _current_target = (double) _targets.front().first;
                         _type = _targets.front().second;
@@ -189,12 +245,26 @@ void elevator::set_position(double position)
                 }
                 else
                 {
+                    /*
+                     * If we don't have any targets to go to, the elevator is designated as
+                     * idle, with no direction nor extreme direction.
+                     */
                     _state = Idle;
                     _direction = MotorStop;
                     _extreme_direction = MotorStop;
+                    /*
+                     * When we become idle, we check with the schedule monitor if there is any
+                     * command that hasn't been scheduled yet.
+                     */
                     command * cmd = _sched_monitor->get_first_command_not_fitted();
                     if(cmd != nullptr)
                     {
+                        /*
+                         * If there is a command that hasn't been scheduled yet, we take it as our
+                         * next command to serve and we check with the schedule monitor if there
+                         * are any other commands that hasn't been scheduled yet and that can be
+                         * served together with the command we have already gotten.
+                         */
                         handle_command(*cmd);
                         std::vector<command *> more_commands = _sched_monitor->get_more_unfitted_commands(_scale / elevator::TICK, cmd);
                         for (auto it = more_commands.begin(), end = more_commands.end(); it != end; ++it)
@@ -211,6 +281,9 @@ void elevator::set_position(double position)
     pthread_mutex_unlock(&_mon_lock);
 }
 
+/*
+ * Public method for the elevator handling thread to add a command for this elevator to handle.
+ */
 void elevator::add_command(command new_command)
 {
     pthread_mutex_lock(&_mon_lock);
@@ -218,13 +291,20 @@ void elevator::add_command(command new_command)
     pthread_mutex_unlock(&_mon_lock);
 }
 
-int elevator::absolut_position_relative(FloorButtonPressDesc button)
+/*
+ * Get the elevators absolute position relative a floor button press in case this elevator
+ * is able to serve that press in its current state. If it's not able, it returns -1.
+ */
+int elevator::absolute_position_relative(FloorButtonPressDesc button)
 {
-    int button_press_position = button.floor / elevator::TICK; 
+    /*
+     *
+     */
+    int button_press_position = button.floor / elevator::TICK;
     if (is_schedulable(button.type))
     {
         int elevator_position = (int) ((_position + elevator::EPSILON) / elevator::TICK);
-        if (_state == Idle || (button.type == GoingUp ? button_press_position >= elevator_position : button_press_position <= elevator_position))
+        if (_state == Idle || (button.type == GoingUp ? button_press_position > elevator_position : button_press_position < elevator_position))
         {
             return std::abs(button_press_position - elevator_position);
         }

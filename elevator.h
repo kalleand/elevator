@@ -52,7 +52,7 @@ class elevator
          */
         void set_position(double position);
         void add_command(command new_command);
-        int absolut_position_relative(FloorButtonPressDesc button);
+        int absolute_position_relative(FloorButtonPressDesc button);
         void run_elevator();
 
         /*
