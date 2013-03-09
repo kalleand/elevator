@@ -297,21 +297,34 @@ void elevator::add_command(command new_command)
  */
 int elevator::absolute_position_relative(FloorButtonPressDesc button)
 {
+    int button_press_position = button.floor / elevator::TICK; /* For example, floor 1 equals 25, floor 2 equals 50 and so on. */
     /*
-     *
+     * Check if this button press can be scheduled by this elevator.
      */
-    int button_press_position = button.floor / elevator::TICK;
     if (is_schedulable(button.type))
     {
+        /*
+         * Get the position of this elevator in the same scale as the button press position.
+         */
         int elevator_position = (int) ((_position + elevator::EPSILON) / elevator::TICK);
         if (_state == Idle || (button.type == GoingUp ? button_press_position > elevator_position : button_press_position < elevator_position))
         {
+            /*
+             * If the elevator is idle or the position of the elevator hasn't passed the position
+             * of the button press, return the absolute relative position.
+             */
             return std::abs(button_press_position - elevator_position);
         }
     }
+    /*
+     * If the elevator didn't match the criteria above, it's not suitable and returns -1.
+     */
     return -1;
 }
 
+/*
+ *
+ */
 void elevator::run_elevator()
 {
     pthread_mutex_lock(&_mon_lock);
@@ -321,7 +334,7 @@ void elevator::run_elevator()
         // Check next target
         if (_targets.size() > 0)
         {
-            _current_target = (double) _targets.front().first;
+            _current_target = _targets.front().first;
             _type = _targets.front().second;
             _targets.erase(_targets.begin());
 
@@ -377,11 +390,11 @@ void elevator::handle_command(command cmd)
         bool ok_command = true;
         if(_extreme_direction == MotorStop)
         {
-            if((double) cmd.desc.fbp.floor > _position)
+            if((double) cmd.desc.fbp.floor > _position + elevator::EPSILON)
             {
                 _direction = MotorUp;
             }
-            else if((double) cmd.desc.fbp.floor < _position)
+            else if((double) cmd.desc.fbp.floor < _position - elevator::EPSILON)
             {
                 _direction = MotorDown;
             }
@@ -570,43 +583,64 @@ void elevator::handle_command(command cmd)
     }
 }
 
+/*
+ * Function returning whether this elevator is schedulable for the given floor button press or not.
+ */
 bool elevator::is_schedulable(FloorButtonType type) const
 {
     if(_state == EmergencyStop) return false;
+
     bool ret_bool = false;
+    /*
+     * If the elevator is idle, it is definitely schedulable.
+     */
     if(_state == Idle)
     {
         ret_bool = true;
     }
-    else if(_extreme_direction == _direction)
+    /*
+     * Check if the elevator ultimately is going in the same direction as the button press wants to go.
+     */
+    if (type == GoingUp && _extreme_direction == MotorUp)
     {
-        if(type == GoingUp && _direction == MotorUp)
-        {
-            ret_bool = true;
-        }
-        else if(type == GoingDown && _direction == MotorDown)
-        {
-            ret_bool = true;
-        }
-        else if(_extreme_direction == MotorStop)
-        {
-            ret_bool = true;
-        }
+        ret_bool = true;
+    }
+    else if (type == GoingDown && _extreme_direction == MotorDown)
+    {
+        ret_bool = true;
+    }
+    /*
+     * Check if we've reached the top/bottom floor and thereby is schedulable before the elevator
+     * is designated as idle.
+     */
+    else if (_extreme_direction == MotorStop)
+    {
+        ret_bool = true;
     }
     return ret_bool;
 }
 
+/*
+ * Function for getting the current time in seconds.
+ */
 double elevator::read_time()
 {
     struct timeval tv;
     gettimeofday(&tv, nullptr);
     return tv.tv_sec + 1.0e-6 * tv.tv_usec;
 }
+
+/*
+ * Ascending comparison.
+ */
 bool compare_pairs_asc(const std::pair<int, EventType> & a1, const std::pair<int, EventType> & a2)
 {
     return a1.first < a2.first;
 }
 
+/*
+ * Descending comparison.
+ */
 bool compare_pairs_desc(const std::pair<int, EventType> & a1, const std::pair<int, EventType> & a2)
 {
     return a1.first > a2.first;
