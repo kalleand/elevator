@@ -337,28 +337,44 @@ void elevator::handle_command(command cmd)
                     }
                     ) == _targets.end())
         {
-            if(_direction != MotorStop)
+            if(_current_target == cmd.desc.fbp.floor)
             {
-                _targets.push_back(std::pair<int, EventType>(_current_target, _type));
-            }
-            _targets.push_back(std::pair<int, EventType>(cmd.desc.fbp.floor, cmd.type));
-            if(_direction == MotorDown)
-            {
-                std::sort(_targets.begin(), _targets.end(), compare_pairs_desc);
-            }
-            else if(_direction == MotorUp)
-            {
-                std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
+                if(_state == Idle)
+                {
+                    _extreme_direction = (cmd.desc.fbp.type == GoingUp) ? MotorUp : MotorDown;
+                    _state = OpeningDoor;
+                    _command_output->setDoor(_number, DoorOpen);
+                }
+                else
+                {
+                    _type = FloorButton;
+                }
             }
             else
             {
-                std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
-            }
-            _current_target = _targets.front().first;
-            _type = _targets.front().second;
-            if(_direction != MotorStop)
-            {
-                _targets.erase(_targets.begin());
+                if(_direction != MotorStop)
+                {
+                    _targets.push_back(std::pair<int, EventType>(_current_target, _type));
+                }
+                _targets.push_back(std::pair<int, EventType>(cmd.desc.fbp.floor, cmd.type));
+                if(_direction == MotorDown)
+                {
+                    std::sort(_targets.begin(), _targets.end(), compare_pairs_desc);
+                }
+                else if(_direction == MotorUp)
+                {
+                    std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
+                }
+                else
+                {
+                    std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
+                }
+                _current_target = _targets.front().first;
+                _type = _targets.front().second;
+                if(_direction != MotorStop)
+                {
+                    _targets.erase(_targets.begin());
+                }
             }
             command tmp_cmd(_type, {FloorButtonPressDesc{_current_target, (_extreme_direction == MotorUp) ? GoingUp : GoingDown} });
             std::vector<command *> more_commands = _sched_monitor->get_more_unfitted_commands(_scale / elevator::TICK, &tmp_cmd);
@@ -428,28 +444,40 @@ void elevator::handle_command(command cmd)
                     }
                     ) == _targets.end())
         {
-            if(_direction != MotorStop)
+            if(_current_target == cmd.desc.cbp.floor)
             {
-                _targets.push_back(std::pair<int, EventType>(_current_target, _type));
-            }
-            _targets.push_back(std::pair<int, EventType>(cmd.desc.cbp.floor, cmd.type));
-            if(_direction == MotorDown)
-            {
-                std::sort(_targets.begin(), _targets.end(), compare_pairs_desc);
-            }
-            else if(_direction == MotorUp)
-            {
-                std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
+                if(_state == Idle && cmd.desc.cbp.floor != _scale)
+                {
+                    _extreme_direction = (_scale < cmd.desc.cbp.floor) ? MotorUp : MotorDown;
+                    _state = OpeningDoor;
+                    _command_output->setDoor(_number, DoorOpen);
+                }
             }
             else
             {
-                std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
-            }
-            _current_target = _targets.front().first;
-            _type = _targets.front().second;
-            if(_direction != MotorStop)
-            {
-                _targets.erase(_targets.begin());
+                if(_direction != MotorStop)
+                {
+                    _targets.push_back(std::pair<int, EventType>(_current_target, _type));
+                }
+                _targets.push_back(std::pair<int, EventType>(cmd.desc.cbp.floor, cmd.type));
+                if(_direction == MotorDown)
+                {
+                    std::sort(_targets.begin(), _targets.end(), compare_pairs_desc);
+                }
+                else if(_direction == MotorUp)
+                {
+                    std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
+                }
+                else
+                {
+                    std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
+                }
+                _current_target = _targets.front().first;
+                _type = _targets.front().second;
+                if(_direction != MotorStop)
+                {
+                    _targets.erase(_targets.begin());
+                }
             }
             command tmp_cmd(FloorButton, {FloorButtonPressDesc{_current_target, (_extreme_direction == MotorUp) ? GoingUp : GoingDown} });
             std::vector<command *> more_commands = _sched_monitor->get_more_unfitted_commands(_scale / elevator::TICK, &tmp_cmd);
