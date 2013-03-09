@@ -379,56 +379,144 @@ void * read_thread(void * input)
     pthread_exit(nullptr);
 }
 
+/*
+ * Function used by the threads handling a specific elevator.
+ *
+ * Continuously checking the vector with commands assigned to the elevator and
+ * passing them on to the monitor associated with the elevator.
+ *
+ * After checking the vector the monitor function called run_elevator() is called.
+ */
 void * handle_elevator(void * input)
 {
+    /*
+     * Determine which elevator to control.
+     */
     long elevator_number = (long) input;
+
+    /*
+     * Loop until the main thread signals that the simulation is over (done == true).
+     */
     while (!done)
     {
+        /*
+         * First a check to see if there are any new commands to handle are made.
+         * This check is performed outside without locking because the main reason
+         * the only relevant information is if the vector is empty or not.
+         */
         if (elevator_specific_updates[elevator_number].size() > 0)
         {
+            /*
+             * Now we need to provide mutual exclusion as we are going to be getting
+             * commands and erasing them from the vector.
+             */
             pthread_mutex_lock(&elevator_updates_locks[elevator_number]);
 
+            /*
+             * Grab the first command and then queue it for the elevator that we
+             * are controlling.
+             */
             command & cmd = elevator_specific_updates[elevator_number].front();
             if (cmd.type == CabinButton || cmd.type == FloorButton)
             {
                 elevators[elevator_number].add_command(cmd);
             }
-            else// if (cmd.type == Position)
+            else /* if (cmd.type == Position) */
             {
+                /*
+                 * Positions are more important to handle straight away. Therefore
+                 * the same queue is not used and the command is handled immediately
+                 * once the lock is aqquired inside the monitor.
+                 */
                 elevators[elevator_number].set_position(cmd.desc.cp.position);
             }
+            /*
+             * Once the command has been processed it is no longer needed and it is
+             * removed from the vector. After the command has been removed mutual exclusion
+             * is no longer needed.
+             */
             elevator_specific_updates[elevator_number].erase(elevator_specific_updates[elevator_number].begin());
             pthread_mutex_unlock(&elevator_updates_locks[elevator_number]);
         }
+        /*
+         * This command handles idle elevators and when the elevator doors are opened.
+         */
         elevators[elevator_number].run_elevator();
     }
     pthread_exit(nullptr);
 }
 
+/*
+ * Function that is used by the thread which is responsible for scheduling floor button
+ * presses (commands that are not obvious which elevator it is destined for).
+ *
+ * Iterates over every elevator and invokes a function in the monitor responsible for this
+ * elevator. This method returns with the absolute distance between the floor the button
+ * was pressed on and the position of the elevator, or -1 if the elevator is not able to
+ * handle the command. Then the elevators are sorted on the distance and the elevators are
+ * tried to be scheduled (if they have passed the floor for instance we take the next in the
+ * vector).
+ */
 void * scheduler(void * arguments)
 {
+    /*
+     * Loop through the procedure until the main thread signals to this thread that the
+     * simulation is over. (Done through setting done == true.)
+     */
     while (!done)
     {
+        /*
+         * The commands are saved in the monitor that handles unscheduled commands.
+         * We get the next in line by accessing the function get_first_new_command().
+         * This is a FIFO queue and is therefore fair towards the order the commands
+         * arrived.
+         */
         command cmd = commands_to_schedule->get_first_new_command();
+        /*
+         * The only commands that is needed to be scheduled are floor button presses.
+         * Therfore we can call the union desc fbp member. (fbp == floor button press)
+         */
         FloorButtonPressDesc button = cmd.desc.fbp;
+        /*
+         * The possible elevators are saved in a vector holding pairs with a pointer to the
+         * elevator along with the score.
+         * The score is saved as the number of ticks (postion updates away) to avoid the
+         * inaccuracy of using doubles.
+         */
         std::vector<std::pair<elevator *, int>> possible_elevators;
+
         for (unsigned int i = 1; i < elevators.size(); ++i)
         {
             elevator & el = elevators[i];
-            int position = el.absolut_position_relative(button);
+            int position = el.absolute_position_relative(button);
 
+            /*
+             * Absolute_position_relative returns -1 if the elevator is not a possible
+             * elevator at this point in time.
+             */
             if (position != -1)
             {
                 possible_elevators.push_back(std::pair<elevator *,int>(&el,position));
             }
         }
 
+        /*
+         * It is possible that no elevator can handle the command, if this is the case
+         * we add the command to a queue of not possible commands in the schedule monitor.
+         * Once the elevators become idle or handling a new command they will check this
+         * queue if they can take one or more of these not possible commands.
+         */
         if (possible_elevators.size() == 0)
         {
             commands_to_schedule->add_command_not_possible_to_schedule(cmd);
             continue;
         }
 
+        /*
+         * We only need to sort if the vector of possible elevators are more than one.
+         * To sort the vector of pairs a lambda function is used, this function sorts the
+         * vector in ascending order based on the integer value.
+         */
         if (possible_elevators.size() > 1)
         {
             std::sort(possible_elevators.begin(), possible_elevators.end(),
@@ -438,12 +526,26 @@ void * scheduler(void * arguments)
                     });
         }
 
+        /*
+         * press_scheduled is used to signal later if we managed to schedule the event.
+         */
         bool press_scheduled = false;
+
+        /*
+         * We now want to schedule the event. The best elevator is tried first for scheduling.
+         * The reason we check if the absolute_position_relative again is beacuse if
+         * the elevator passed the destination before it is no longer able to handle the command
+         * and the next elevator in line is tried.
+         */
         for (auto it = possible_elevators.begin(), end = possible_elevators.end(); it != end; ++it)
         {
             elevator * best_elevator = it->first;
+            /*
+             * Mutual exclusion is needed because we do not want a position update that could
+             * lead to the elevator missing the destination and becoming unresponsive.
+             */
             pthread_mutex_lock(&elevator_updates_locks[best_elevator->get_number()]);
-            if (best_elevator->absolut_position_relative(button) >= 0)
+            if (best_elevator->absolute_position_relative(button) >= 0)
             {
                 elevator_specific_updates[best_elevator->get_number()].insert(elevator_specific_updates[best_elevator->get_number()].begin(), cmd);
                 pthread_mutex_unlock(&elevator_updates_locks[best_elevator->get_number()]);
@@ -453,6 +555,10 @@ void * scheduler(void * arguments)
             pthread_mutex_unlock(&elevator_updates_locks[best_elevator->get_number()]);
         }
 
+        /*
+         * Here we check if the command was scheduled and if it was not it is queued for later
+         * scheduling. This is to ensure fairness.
+         */
         if (!press_scheduled)
         {
             commands_to_schedule->add_command_not_possible_to_schedule(cmd);
