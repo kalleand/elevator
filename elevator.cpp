@@ -1,42 +1,62 @@
 #include "elevator.h"
 
+/*
+ * Two functions to enable sorting of the _target vector.
+ */
 bool compare_pairs_asc(const std::pair<int, EventType> & a1, const std::pair<int, EventType> & a2);
 bool compare_pairs_desc(const std::pair<int, EventType> & a1, const std::pair<int, EventType> & a2);
 
-elevator::elevator() : _command_output(nullptr), _sched_monitor(nullptr), _number(0), _position(0.0), _direction(MotorStop), _extreme_direction(MotorStop), _tick_counter(0), _targets(), _current_target(0), _scale(0), _state(Idle), _time(-1), _type(Error)
+/*
+ * Default constructor, shouldn't be used.
+ */
+elevator::elevator() : _command_output(nullptr), _sched_monitor(nullptr), _number(0), _position(0.0), _direction(MotorStop), _extreme_direction(MotorStop), _tick_counter(0), _targets(), _current_target(0), _type(Error), _scale(0), _state(Idle), _time(-1)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
-    pthread_cond_init(&_door_cond, nullptr);
 }
 
-elevator::elevator(int number, socket_monitor * socket_mon, commands_to_schedule_monitor * schedule_monitor) : _command_output(socket_mon), _sched_monitor(schedule_monitor), _number(number),_position(0.0), _direction(MotorStop), _extreme_direction(MotorStop), _tick_counter(0), _targets(), _current_target(0), _scale(0), _state(Idle), _time(-1), _type(Error)
+/*
+ * The constructor to use, initializes the elevator with an associated number,
+ * pointers to the monitor objects that the elevator needs to access and
+ * the internal state to being idle on the bottom floor.
+ */
+elevator::elevator(int number, socket_monitor * socket_mon, commands_to_schedule_monitor * schedule_monitor) : _command_output(socket_mon), _sched_monitor(schedule_monitor), _number(number),_position(0.0), _direction(MotorStop), _extreme_direction(MotorStop), _tick_counter(0), _targets(), _current_target(0), _type(Error), _scale(0), _state(Idle), _time(-1)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
-    pthread_cond_init(&_door_cond, nullptr);
 }
 
-elevator::elevator(const elevator & source) : _command_output(source._command_output), _sched_monitor(source._sched_monitor), _number(source._number),_position(source._position), _direction(source._direction), _extreme_direction(source._extreme_direction), _tick_counter(source._tick_counter), _targets(source._targets), _current_target(source._current_target), _scale(source._scale), _state(source._state), _time(source._time), _type(source._type)
+/*
+ * Copy constructor, in case the elevator object is copied.
+ */
+elevator::elevator(const elevator & source) : _command_output(source._command_output), _sched_monitor(source._sched_monitor), _number(source._number),_position(source._position), _direction(source._direction), _extreme_direction(source._extreme_direction), _tick_counter(source._tick_counter), _targets(source._targets), _current_target(source._current_target), _type(source._type), _scale(source._scale), _state(source._state), _time(source._time)
 {
     _mon_lock = source._mon_lock;
-    _door_cond = source._door_cond;
 }
 
-elevator::elevator(elevator && source) : _command_output(source._command_output), _sched_monitor(source._sched_monitor), _number(source._number),_position(source._position), _direction(source._direction), _extreme_direction(source._extreme_direction), _tick_counter(source._tick_counter), _targets(source._targets), _current_target(source._current_target), _scale(source._scale), _state(source._state), _time(source._time), _type(source._type)
+/*
+ * Move constructor.
+ */
+elevator::elevator(elevator && source) : _command_output(source._command_output), _sched_monitor(source._sched_monitor), _number(source._number),_position(source._position), _direction(source._direction), _extreme_direction(source._extreme_direction), _tick_counter(source._tick_counter), _targets(source._targets), _current_target(source._current_target), _type(source._type), _scale(source._scale), _state(source._state), _time(source._time)
 {
     pthread_mutex_init(&_mon_lock, nullptr);
-    pthread_cond_init(&_door_cond, nullptr);
     source._command_output = nullptr;
     source._sched_monitor = nullptr;
 }
 
+/*
+ * Destructor.
+ */
 elevator::~elevator()
 {
 }
 
+/*
+ * Copy-assignment operator, does almost the same thing as the copy constructor.
+ */
 elevator & elevator::operator=(const elevator & source)
 {
     if(this != &source)
     {
+        _mon_lock = source._mon_lock;
         _number = source._number;
         _position = source._position;
         _direction = source._direction;
@@ -50,10 +70,14 @@ elevator & elevator::operator=(const elevator & source)
     return *this;
 }
 
+/*
+ * Move-assignment operator, does almost the same thing as the move constructor.
+ */
 elevator & elevator::operator=(elevator && source)
 {
     if(this != &source)
     {
+        _mon_lock = source._mon_lock;
         _number = source._number;
         _position = source._position;
         _direction = source._direction;
@@ -69,6 +93,11 @@ elevator & elevator::operator=(elevator && source)
     return *this;
 }
 
+/*
+ * Get the associated number of this elevator, the only public method of this class
+ * not executed with mutual exclusion since this number is only set upon creation
+ * and then never changed and therefore is safe to access.
+ */
 int elevator::get_number() const
 {
     return _number;
@@ -182,22 +211,6 @@ void elevator::set_position(double position)
     pthread_mutex_unlock(&_mon_lock);
 }
 
-double elevator::get_position()
-{
-    pthread_mutex_lock(&_mon_lock);
-    double ret_position = _position;
-    pthread_mutex_unlock(&_mon_lock);
-    return ret_position;
-}
-
-int elevator::get_direction()
-{
-    pthread_mutex_lock(&_mon_lock);
-    int ret_direction = _direction;
-    pthread_mutex_unlock(&_mon_lock);
-    return ret_direction;
-}
-
 void elevator::add_command(command new_command)
 {
     pthread_mutex_lock(&_mon_lock);
@@ -205,54 +218,10 @@ void elevator::add_command(command new_command)
     pthread_mutex_unlock(&_mon_lock);
 }
 
-int elevator::get_scale()
-{
-    pthread_mutex_lock(&_mon_lock);
-    int ret_scale = _scale;
-    pthread_mutex_unlock(&_mon_lock);
-    return ret_scale;
-}
-
-int elevator::get_state()
-{
-    pthread_mutex_lock(&_mon_lock);
-    int ret_state = _state;
-    pthread_mutex_unlock(&_mon_lock);
-    return ret_state;
-}
-
-int elevator::get_extreme_target()
-{
-    pthread_mutex_lock(&_mon_lock);
-    int ret_target;
-    if(_targets.size() > 0)
-        ret_target = _targets.back().first;
-    else
-        ret_target = _current_target;
-    pthread_mutex_unlock(&_mon_lock);
-    return ret_target;
-}
-
-int elevator::get_extreme_direction()
-{
-    pthread_mutex_lock(&_mon_lock);
-    int ret_direction = _extreme_direction;
-    pthread_mutex_unlock(&_mon_lock);
-    return ret_direction;
-}
-
-bool elevator::is_schedulable(FloorButtonType type)
-{
-    pthread_mutex_lock(&_mon_lock);
-    bool ret_bool = _is_schedulable(type);
-    pthread_mutex_unlock(&_mon_lock);
-    return ret_bool;
-}
-
 int elevator::absolut_position_relative(FloorButtonPressDesc button)
 {
     int button_press_position = button.floor / elevator::TICK; 
-    if (_is_schedulable(button.type))
+    if (is_schedulable(button.type))
     {
         int elevator_position = (int) ((_position + elevator::EPSILON) / elevator::TICK);
         if (_state == Idle || (button.type == GoingUp ? button_press_position >= elevator_position : button_press_position <= elevator_position))
@@ -493,7 +462,7 @@ void elevator::handle_command(command cmd)
     }
 }
 
-bool elevator::_is_schedulable(FloorButtonType type) const
+bool elevator::is_schedulable(FloorButtonType type) const
 {
     if(_state == EmergencyStop) return false;
     bool ret_bool = false;
