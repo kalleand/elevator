@@ -161,9 +161,11 @@ void elevator::set_position(double position)
                 _direction = MotorStop;
                 /*
                  * If we've reached the top/bottom floor, we can't keep going up/down, so we
-                 * reset the extreme direction to be stopped.
+                 * reset the extreme direction to be stopped. We also do that in case the
+                 * just executed command was a cabin button press and that there are no more
+                 * target floors that this elevator is trying to go to.
                  */
-                if(is_end_point)
+                if(is_end_point || (_type == CabinButton && _targets.size() == 0))
                     _extreme_direction = MotorStop;
                 /*
                  * We have reached the current target floor, so we stop the elevator and starts
@@ -212,35 +214,33 @@ void elevator::set_position(double position)
                  */
                 if( _targets.size() > 0)
                 {
-                    while(_targets.size() > 0)
-                    {
-                        // TODO Comments and maybe restructure.
-                        // We now want to start moving towards our next target.
-                        _current_target = (double) _targets.front().first;
-                        _type = _targets.front().second;
-                        _targets.erase(_targets.begin());
+                    /*
+                     * We have a target, so update the current target, the type that the current
+                     * target was a result of and remove it from the list of targets.
+                     */
+                    _current_target = _targets.front().first;
+                    _type = _targets.front().second;
+                    _targets.erase(_targets.begin());
 
-                        if(_scale > _current_target)
-                        {
-                            // We want to move down.
-                            _state = Moving;
-                            _direction = MotorDown;
-                            _command_output->setMotor(_number, MotorDown);
-                            break;
-                        }
-                        else if(_scale < _current_target)
-                        {
-                            // We want to move up.
-                            _state = Moving;
-                            _direction = MotorUp;
-                            _command_output->setMotor(_number, MotorUp);
-                            break;
-                        }
-                        else
-                        {
-                            // Our next target is the same as where we are.
-                            continue;
-                        }
+                    if (_current_target < _scale)
+                    {
+                        /*
+                         * The elevator has to go down in order to reach the target, so set the
+                         * elevator in motion downwards.
+                         */
+                        _state = Moving;
+                        _direction = MotorDown;
+                        _command_output->setMotor(_number, MotorDown);
+                    }
+                    else if (_current_target > _scale)
+                    {
+                        /*
+                         * The elevator has to go up in order to reach the target, so set the
+                         * elevator in motion upwards.
+                         */
+                        _state = Moving;
+                        _direction = MotorUp;
+                        _command_output->setMotor(_number, MotorUp);
                     }
                 }
                 else
@@ -307,11 +307,15 @@ int elevator::absolute_position_relative(FloorButtonPressDesc button)
          * Get the position of this elevator in the same scale as the button press position.
          */
         int elevator_position = (int) ((_position + elevator::EPSILON) / elevator::TICK);
-        if (_state == Idle || (button.type == GoingUp ? button_press_position > elevator_position : button_press_position < elevator_position))
+        if (_state == Idle
+                || (button.type == GoingUp ? button_press_position > elevator_position : button_press_position < elevator_position)
+                || (_state != Moving && _state != ClosingDoor && button_press_position == elevator_position))
         {
             /*
-             * If the elevator is idle or the position of the elevator hasn't passed the position
-             * of the button press, return the absolute relative position.
+             * If the elevator is idle, the position of the elevator hasn't passed the position
+             * of the button press or if that when the doors are opening or open and the
+             * position of the button press and the elevator position is the same, return the
+             * absolute relative position.
              */
             return std::abs(button_press_position - elevator_position);
         }
@@ -323,7 +327,10 @@ int elevator::absolute_position_relative(FloorButtonPressDesc button)
 }
 
 /*
- *
+ * Function responsible for setting the elevator in motion in case a new
+ * command has been given to this elevator if it's idle and to check how
+ * long the door has been opened and to start closing it when it's been
+ * open long enough.
  */
 void elevator::run_elevator()
 {
@@ -331,9 +338,11 @@ void elevator::run_elevator()
 
     if (_state == Idle)
     {
-        // Check next target
         if (_targets.size() > 0)
         {
+            /*
+             * Get the first target if any has been given to this elevator and execute it.
+             */
             _current_target = _targets.front().first;
             _type = _targets.front().second;
             _targets.erase(_targets.begin());
@@ -358,6 +367,10 @@ void elevator::run_elevator()
         }
         else
         {
+            /*
+             * Otherwise try to get commands that the scheduler hasn't been able to schedule
+             * and executed it.
+             */
             command * cmd = _sched_monitor->get_first_command_not_fitted();
             if(cmd != nullptr)
             {
@@ -374,6 +387,10 @@ void elevator::run_elevator()
     }
     else if( _state == OpenDoor)
     {
+        /*
+         * Read the current time and check if the door has been open long enough
+         * and then start closing the door.
+         */
         if(read_time() - _time > TIME_LIMIT)
         {
             _state = ClosingDoor;
@@ -383,13 +400,29 @@ void elevator::run_elevator()
     pthread_mutex_unlock(&_mon_lock);
 }
 
+/*
+ * Private function handling a new command that is given to the elevator by the
+ * scheduler.
+ */
 void elevator::handle_command(command cmd)
 {
+    /*
+     * Check if the command is a floor button press or a cabin button press.
+     */
     if (cmd.type == FloorButton)
     {
+        /*
+         * Assume from the beginning that the command can be handled by this elevator.
+         */
         bool ok_command = true;
+        /*
+         * Check if the elevator has reached its current highest/lowest target.
+         */
         if(_extreme_direction == MotorStop)
         {
+            /*
+             * Update the direction that this elevator now will go.
+             */
             if((double) cmd.desc.fbp.floor > _position + elevator::EPSILON)
             {
                 _direction = MotorUp;
@@ -398,6 +431,10 @@ void elevator::handle_command(command cmd)
             {
                 _direction = MotorDown;
             }
+            /*
+             * Update the direction that this elevator is meant to go when the elevator
+             * has reached the target of this command.
+             */
             if(cmd.desc.fbp.type == GoingUp)
             {
                 _extreme_direction = MotorUp;
@@ -407,6 +444,13 @@ void elevator::handle_command(command cmd)
                 _extreme_direction = MotorDown;
             }
         }
+        /*
+         * Check if the elevator is currently trying to go down when the current target floor
+         * has been reached. If that's the case and this floor button is a wish to go up,
+         * then the command can't currently be served by this elevator and thereby the
+         * command has to be added to the list of commands that hasn't been possible to
+         * schedule yet.
+         */
         else if(_extreme_direction == MotorDown)
         {
             if(cmd.desc.fbp.type != GoingDown)
@@ -415,6 +459,9 @@ void elevator::handle_command(command cmd)
                 ok_command = false;
             }
         }
+        /*
+         * A check for the opposite of the above if-statement.
+         */
         else if(_extreme_direction == MotorUp)
         {
             if(cmd.desc.fbp.type != GoingUp)
@@ -423,52 +470,101 @@ void elevator::handle_command(command cmd)
                 ok_command = false;
             }
         }
-        if(ok_command && std::find_if(_targets.begin(), _targets.end(),
-                    [&] (const std::pair<int, EventType> & comp)
-                    {
-                    return comp.first == cmd.desc.fbp.floor;
-                    }
-                    ) == _targets.end())
+        /*
+         * Try to find the target floor of the command we're currently checking among the
+         * current target floors.
+         */
+        auto existing = std::find_if(_targets.begin(), _targets.end(),
+                [&] (const std::pair<int, EventType> & comp)
+                {
+                return comp.first == cmd.desc.fbp.floor;
+                }
+                );
+
+        /*
+         * Check if the command is a valid command for this elevator right now and
+         * that the target floor of this command isn't already a target for this
+         * elevator.
+         */
+        if(ok_command && existing == _targets.end())
         {
+            /*
+             * Check if the target floor of this command is the same as the elevator is already on.
+             */
             if(_current_target == cmd.desc.fbp.floor)
             {
                 if(_state == Idle)
                 {
-                    _extreme_direction = (cmd.desc.fbp.type == GoingUp) ? MotorUp : MotorDown;
+                    /*
+                     * If the elevator is idle, open the doors.
+                     */
                     _state = OpeningDoor;
                     _command_output->setDoor(_number, DoorOpen);
                 }
-                else
-                {
-                    _type = FloorButton;
-                }
+                /*
+                 * Make sure that this command would be handled by another elevator in case
+                 * the emergency stop button is pressed before the elevator turn idle again.
+                 */
+                _type = FloorButton;
             }
+            /*
+             * Otherwise the target floor of this command is on another floor than this elevator
+             * is currently on.
+             */
             else
             {
+                /*
+                 * If the elevator is currently moving up or down, remember its current target
+                 * and the type that requested this target.
+                 */
                 if(_direction != MotorStop)
                 {
                     _targets.push_back(std::pair<int, EventType>(_current_target, _type));
                 }
+                /*
+                 * Add the command that we got as a target.
+                 */
                 _targets.push_back(std::pair<int, EventType>(cmd.desc.fbp.floor, cmd.type));
-                if(_direction == MotorDown)
+                /*
+                 * If the elevator is ultimately going down, sort the target floors in descending order.
+                 */
+                if(_extreme_direction == MotorDown)
                 {
                     std::sort(_targets.begin(), _targets.end(), compare_pairs_desc);
                 }
-                else if(_direction == MotorUp)
+                /*
+                 * If the elevator is ultimately going up, sort the target floors in ascending order.
+                 */
+                else if(_extreme_direction == MotorUp)
                 {
                     std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
                 }
+                /* TODO
+                 * Fail safe, never happens I think.
+                 */
                 else
                 {
                     std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
                 }
+                /*
+                 * Update the current target and its type to the first in the list of targets.
+                 */
                 _current_target = _targets.front().first;
                 _type = _targets.front().second;
+                /*
+                 * Don't remove the first element in the list of targets in case the elevator
+                 * isn't moving right now, doing that would mean that the command wouldn't
+                 * be started by either the set_position function or the run_elevator function.
+                 */
                 if(_direction != MotorStop)
                 {
                     _targets.erase(_targets.begin());
                 }
             }
+            /*
+             * Also try to get more commands that hasn't been possible to schedule yet that can
+             * be served in conjunction with the given command.
+             */
             command tmp_cmd(_type, {FloorButtonPressDesc{_current_target, (_extreme_direction == MotorUp) ? GoingUp : GoingDown} });
             std::vector<command *> more_commands = _sched_monitor->get_more_unfitted_commands(_scale / elevator::TICK, &tmp_cmd);
             for (auto it = more_commands.begin(), end = more_commands.end(); it != end; ++it)
@@ -477,16 +573,34 @@ void elevator::handle_command(command cmd)
                 delete *it;
             }
         }
+        /*
+         * If the target floor of this command is already a target of this elevator,
+         * make sure that it's registered as a floor button press so that the
+         * elevator will pass the command on to other elevators in case anyone
+         * presses the emergency stop button.
+         */
+        else if (ok_command)
+        {
+            existing->second = FloorButton;
+        }
     }
     else if (cmd.type == CabinButton)
     {
-        // If its emergency stop.
+        /*
+         * Check if it was an emergency stop cabin button press.
+         */
         if(cmd.desc.cbp.floor == 32000)
         {
+            /*
+             * It was an emergency stop, set the state of the elevator accordingly and stop
+             * the elevator. Then push the floor button presses this elevator were scheduled
+             * and push them as unscheduled commands so that other elevators can get around
+             * to serving them.
+             */
             _state = EmergencyStop;
             _direction = MotorStop;
             _command_output->setMotor(_number, MotorStop);
-            _targets.push_back(std::pair<int, EventType>(_current_target, _type));
+            _targets.insert(_targets.begin(), std::pair<int, EventType>(_current_target, _type));
             for(std::pair<int, EventType> p : _targets)
             {
                 if(p.second == FloorButton)
@@ -498,20 +612,38 @@ void elevator::handle_command(command cmd)
             }
             return;
         }
+        /*
+         * Now we know it's not an emergency stop, assume that the command is OK for
+         * this elevator to handle
+         */
         bool ok_command = true;
+        /*
+         * Check if the elevator has reached its current highest/lowest target.
+         */
         if(_extreme_direction == MotorStop)
         {
-            if((double) cmd.desc.cbp.floor > _position)
+            /*
+             * If so, update the direction and ultimate direction for this elevator
+             * according to the direction the elevator has to go to reach the target
+             * floor of this command.
+             */
+            if((double) cmd.desc.cbp.floor > _position + elevator::EPSILON)
             {
                 _direction = MotorUp;
                 _extreme_direction = MotorUp;
             }
-            else if((double) cmd.desc.cbp.floor < _position)
+            else if((double) cmd.desc.cbp.floor < _position - elevator::EPSILON)
             {
                 _direction = MotorDown;
                 _extreme_direction = MotorDown;
             }
         }
+        /*
+         * Check if taking on this cabin button press would have to violate the direction
+         * this elevator is currently ultimately is going in order to serve it, if that's
+         * the case, just ignore it and let the person press the same target when the
+         * elevator is able to serve that request.
+         */
         else if(_extreme_direction == MotorDown)
         {
             if(cmd.desc.cbp.floor > _position)
@@ -530,6 +662,11 @@ void elevator::handle_command(command cmd)
                 ok_command = false;
             }
         }
+        /*
+         * Check if the command is a valid command for this elevator right now and
+         * that the target floor of this command isn't already a target for this
+         * elevator.
+         */
         if(ok_command && std::find_if(_targets.begin(), _targets.end(),
                     [&] (const std::pair<int, EventType> & comp)
                     {
@@ -537,41 +674,79 @@ void elevator::handle_command(command cmd)
                     }
                     ) == _targets.end())
         {
+            /*
+             * Check if the target floor of this command is the same as the elevator is already on.
+             */
             if(_current_target == cmd.desc.cbp.floor)
             {
-                if(_state == Idle && cmd.desc.cbp.floor != _scale)
+                if(_state == Idle)
                 {
-                    _extreme_direction = (_scale < cmd.desc.cbp.floor) ? MotorUp : MotorDown;
+                    /*
+                     * If the elevator is idle, open the doors.
+                     */
                     _state = OpeningDoor;
                     _command_output->setDoor(_number, DoorOpen);
                 }
+                /*
+                 * Make sure that this command wouldn't be handled by another elevator in case
+                 * the emergency stop button is pressed before the elevator turn idle again.
+                 */
+                _type = CabinButton;
             }
             else
             {
+                /*
+                 * If the elevator is currently moving up or down, remember its current target
+                 * and the type that requested this target.
+                 */
                 if(_direction != MotorStop)
                 {
                     _targets.push_back(std::pair<int, EventType>(_current_target, _type));
                 }
+                /*
+                 * Add the command that we got as a target.
+                 */
                 _targets.push_back(std::pair<int, EventType>(cmd.desc.cbp.floor, cmd.type));
-                if(_direction == MotorDown)
+                /*
+                 * If the elevator is ultimately going down, sort the target floors in descending order.
+                 */
+                if(_extreme_direction == MotorDown)
                 {
                     std::sort(_targets.begin(), _targets.end(), compare_pairs_desc);
                 }
-                else if(_direction == MotorUp)
+                /*
+                 * If the elevator is ultimately going up, sort the target floors in ascending order.
+                 */
+                else if(_extreme_direction == MotorUp)
                 {
                     std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
                 }
+                /* TODO
+                 * Fail safe, never happens I think.
+                 */
                 else
                 {
                     std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
                 }
+                /*
+                 * Update the current target and its type to the first in the list of targets.
+                 */
                 _current_target = _targets.front().first;
                 _type = _targets.front().second;
+                /*
+                 * Don't remove the first element in the list of targets in case the elevator
+                 * isn't moving right now, doing that would mean that the command wouldn't
+                 * be started by either the set_position function or the run_elevator function.
+                 */
                 if(_direction != MotorStop)
                 {
                     _targets.erase(_targets.begin());
                 }
             }
+            /*
+             * Also try to get more commands that hasn't been possible to schedule yet that can
+             * be served in conjunction with the given command.
+             */
             command tmp_cmd(FloorButton, {FloorButtonPressDesc{_current_target, (_extreme_direction == MotorUp) ? GoingUp : GoingDown} });
             std::vector<command *> more_commands = _sched_monitor->get_more_unfitted_commands(_scale / elevator::TICK, &tmp_cmd);
             for (auto it = more_commands.begin(), end = more_commands.end(); it != end; ++it)
