@@ -1,6 +1,7 @@
 #ifndef __ELEVATOR_COMMANDS_TO_SCHEDULE_MONITOR
 #define __ELEVATOR_COMMANDS_TO_SCHEDULE_MONITOR
 
+#include <algorithm>
 #include <vector>
 #include "command.h"
 #include <pthread.h>

@@ -164,6 +164,9 @@ void commands_to_schedule_monitor::add_new_command_to_schedule(const command & c
 void commands_to_schedule_monitor::add_command_not_possible_to_schedule(const command & cmd)
 {
     pthread_mutex_lock(&_lock);
-    _commands_not_yet_scheduled.push_back(cmd);
+    if (std::find(_commands_not_yet_scheduled.begin(), _commands_not_yet_scheduled.end(), cmd) == _commands_not_yet_scheduled.end())
+    {
+        _commands_not_yet_scheduled.push_back(cmd);
+    }
     pthread_mutex_unlock(&_lock);
 }

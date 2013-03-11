@@ -23,6 +23,8 @@ class command
         command & operator=(const command & source);
         command & operator=(command && source);
 
+        bool operator==(const command & other) const;
+
         /*
          * The EventType and EventDesc as public members
          */
