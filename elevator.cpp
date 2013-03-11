@@ -374,6 +374,7 @@ void elevator::run_elevator()
             command * cmd = _sched_monitor->get_first_command_not_fitted();
             if(cmd != nullptr)
             {
+                std::cout << "Getting unscheduled command" << std::endl;
                 handle_command(*cmd);
                 std::vector<command *> more_commands = _sched_monitor->get_more_unfitted_commands(_scale / elevator::TICK, cmd);
                 for (auto it = more_commands.begin(), end = more_commands.end(); it != end; ++it)
@@ -489,7 +490,7 @@ void elevator::handle_command(command cmd)
         if(ok_command && existing == _targets.end())
         {
             /*
-             * Check if the target floor of this command is the same as the elevator is already on.
+             * Check if the target floor of this command is the same as the elevator is already trying to reach.
              */
             if(_current_target == cmd.desc.fbp.floor)
             {
@@ -528,14 +529,14 @@ void elevator::handle_command(command cmd)
                 /*
                  * If the elevator is ultimately going down, sort the target floors in descending order.
                  */
-                if(_extreme_direction == MotorDown)
+                if(_direction == MotorDown)
                 {
                     std::sort(_targets.begin(), _targets.end(), compare_pairs_desc);
                 }
                 /*
                  * If the elevator is ultimately going up, sort the target floors in ascending order.
                  */
-                else if(_extreme_direction == MotorUp)
+                else if(_direction == MotorUp)
                 {
                     std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
                 }
@@ -605,6 +606,7 @@ void elevator::handle_command(command cmd)
             {
                 if(p.second == FloorButton)
                 {
+                    std::cout << _extreme_direction << std::endl;
                     FloorButtonPressDesc tmp_fbpd = {p.first, (_extreme_direction == MotorUp) ? GoingUp : GoingDown};
                     EventDesc tmp_event = {tmp_fbpd};
                     _sched_monitor->add_command_not_possible_to_schedule(command(p.second, tmp_event));
@@ -708,16 +710,16 @@ void elevator::handle_command(command cmd)
                  */
                 _targets.push_back(std::pair<int, EventType>(cmd.desc.cbp.floor, cmd.type));
                 /*
-                 * If the elevator is ultimately going down, sort the target floors in descending order.
+                 * If the elevator is going down, sort the target floors in descending order.
                  */
-                if(_extreme_direction == MotorDown)
+                if( _direction == MotorDown)
                 {
                     std::sort(_targets.begin(), _targets.end(), compare_pairs_desc);
                 }
                 /*
-                 * If the elevator is ultimately going up, sort the target floors in ascending order.
+                 * If the elevator is going up, sort the target floors in ascending order.
                  */
-                else if(_extreme_direction == MotorUp)
+                else if(_direction == MotorUp)
                 {
                     std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
                 }
