@@ -529,7 +529,8 @@ void elevator::handle_command(command cmd)
                     std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
                 }
                 /*
-                 * Only happens when idle and getting.
+                 * Otherwise the elevator is currently at a stop, so sort according to
+                 * the ultimate direction of the elevator.
                  */
                 else
                 {
@@ -625,12 +626,10 @@ void elevator::handle_command(command cmd)
              */
             if((double) cmd.desc.cbp.floor > _position + elevator::EPSILON)
             {
-                _direction = MotorUp;
                 _extreme_direction = MotorUp;
             }
             else if((double) cmd.desc.cbp.floor < _position - elevator::EPSILON)
             {
-                _direction = MotorDown;
                 _extreme_direction = MotorDown;
             }
         }
@@ -642,7 +641,7 @@ void elevator::handle_command(command cmd)
          */
         else if(_extreme_direction == MotorDown)
         {
-            if(cmd.desc.cbp.floor > _position)
+            if(cmd.desc.cbp.floor > _position + elevator::EPSILON)
             {
                 std::cerr << "FAULTY CABIN BUTTON PRESS!" << std::endl <<
                     "Tried to go up and elevator is going down" << std::endl;
@@ -651,7 +650,7 @@ void elevator::handle_command(command cmd)
         }
         else if(_extreme_direction == MotorUp)
         {
-            if(cmd.desc.cbp.floor < _position)
+            if(cmd.desc.cbp.floor < _position - elevator::EPSILON)
             {
                 std::cerr << "FAULTY CABIN BUTTON PRESS!" << std::endl <<
                     "Tried to go down and elevator is going up" << std::endl;
@@ -671,7 +670,7 @@ void elevator::handle_command(command cmd)
                     ) == _targets.end())
         {
             /*
-             * Check if the target floor of this command is the same as the elevator is already on.
+             * Check if the target floor of this command is the same as the elevator is already trying to reach.
              */
             if(_current_target == cmd.desc.cbp.floor)
             {
@@ -683,11 +682,6 @@ void elevator::handle_command(command cmd)
                     _state = OpeningDoor;
                     _command_output->setDoor(_number, DoorOpen);
                 }
-                /*
-                 * Make sure that this command wouldn't be handled by another elevator in case
-                 * the emergency stop button is pressed before the elevator turn idle again.
-                 */
-                _type = CabinButton;
             }
             else
             {
@@ -717,8 +711,9 @@ void elevator::handle_command(command cmd)
                 {
                     std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
                 }
-                /* TODO
-                 * Fail safe, never happens I think.
+                /*
+                 * Otherwise the elevator is currently at a stop, so sort according to
+                 * the ultimate direction of the elevator.
                  */
                 else
                 {
@@ -748,7 +743,8 @@ void elevator::handle_command(command cmd)
             }
             /*
              * Also try to get more commands that hasn't been possible to schedule yet that can
-             * be served in conjunction with the given command.
+             * be served in conjunction with the given command. For this to work we need to
+             * assume the cabin button press is a floor button press.
              */
             command tmp_cmd(FloorButton, {FloorButtonPressDesc{_current_target, (_extreme_direction == MotorUp) ? GoingUp : GoingDown} });
             std::vector<command *> more_commands = _sched_monitor->get_more_unfitted_commands(_scale / elevator::TICK, &tmp_cmd);
