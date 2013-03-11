@@ -31,7 +31,14 @@ The implementation of the elevator controller uses several threads running simul
 The threads communicate through monitors and it also through monitors that synchronization is achieved. The choice of monitors was made because of the abstraction it provides. In the implementation there are several monitors present. One for handling jobs that are to be scheduled, one to handle the communication between the controller and the elevators and one for each elevator car. The need of a monitor for communication between the controller and the elevators is because of the choice of implementing the controller in C++ the communication is performed over TCP to the elevators. This forces the communication to be performed serialized and this is performed using a monitor.
 
 \section{Scheduling}
-How to decide which elevator that should be sent to handle the command.
+The scheduler is only concerned with scheduling new requests from users coming to the elevator and pressing either up or down depending on the direction they want to go.
+
+What the scheduler does when it gets such a request is to loop over all the elevators. For each elevator, the scheduler asks what the elevators absolute position relative to the request is. If an elevator cannot handle the request, e.g. when an elevator is going upwards and the new request is to go down, the elevator returns a negative value as its absolute position and thereby indicating that it is not available for the scheduler to use.
+
+In the case the elevator does not return a negative value, the scheduler stores the returned value and the elevator that returned that value. When the scheduler has asked all elevators for its absolute position relative the floor of the request, the elevators are sorted according to which was the closest to the floor of the request. Then the scheduler takes the closest elevator and tries to schedule the request to that elevator. This involves asking the elevator for it absolute position
+again to assure that the elevator is still able to handle the request in case that elevator has moved since the scheduler asked it the first time. If the elevator cannot handle the request any longer, the next possible elevator is tried and so on.
+
+If no elevator is able to handle the request to begin with, or if that is the case after checking all the elevators again, the request is added to a FIFO queue of commands that has not been scheduled that the elevators takes requests from regularly. The elevators also make sure to take the first request in the queue in case the elevator turn idle in order to guarantee that every request will eventually be handled.
 
 \section{Handling commands}
 
