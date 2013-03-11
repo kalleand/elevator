@@ -15,9 +15,10 @@ This report handles the implementation of the Green Elevator project in the cour
 \end{abstract}
 
 \section{Introduction}
+\label{sec:intro}
 Elevators are present in almost every apartment complex with more than 1 floor. The controller for these elevators has to receive information about the button presses the users make and schedule the elevators accordingly.
 
-To implement this controller to handle the button presses and also the position updates coming from the elevator is the goal of the project. There are several different aspects that has to be considered when scheduling the different elevator cabins. The most important aspects are to minimize waiting time before a cabin comes to serve the user and to minimize the time spent travelling to the desired floor. Another aspect to take into consideration when implementing a scheduling algorithm for the elevator cabins are power consumption.
+To implement this controller to handle the button presses and also the position updates coming from the elevator is the goal of the project. There are several different aspects that has to be considered when scheduling the different elevator cabins. The most important aspects are to minimize waiting time before a cabin comes to serve the user and to minimize the time spent traveling to the desired floor. Another aspect to take into consideration when implementing a scheduling algorithm for the elevator cabins are power consumption.
 
 In the elevator scheduling problem there are hard deadlines to meet once a press of a button has been made. These deadlines are both to not end up with frustrated end users because the controller of the elevators are too slow to schedule the elevators and to not cause the elevators to miss stopping at a floor because the scheduling algorithm was hard at work scheduling another press of a button from a user. To alleviate these problems and to make the solution future proof if the controller should be used with more powerful hardware, a parallelized implementation is desirable.
 
@@ -46,18 +47,30 @@ Every handler for the elevators will loop through a while loop until it is signa
 % Once a command is received by an elevator monitor it will try to fit it in its vector of floors it is scheduled to stop at. If it is unable to stop at the floor in the command given the monitor will queue it in the unfitted commands vector in the commands to schedule monitor if it was a floor button and discard the command if it came from inside the elevator cabin. If the command was valid it will try to enter it to the vector of scheduled floors. After it was entered into the vector, the vector is sorted either in ascending order for when the elevator is going upwards or descending order if the elevator is going downwards.
 
 \section{Scheduling}
+\label{sec:scheduling}
+
 The scheduler is only concerned with scheduling new requests from users coming to the elevator and pressing either up or down depending on the direction they want to go.
 
 What the scheduler does when it gets such a request is to loop over all the elevators. For each elevator, the scheduler asks what the elevators absolute position relative to the request is. If an elevator cannot handle the request, e.g. when an elevator is going upwards and the new request is to go down, the elevator returns a negative value as its absolute position and thereby indicating that it is not available for the scheduler to use.
 
-In the case the elevator does not return a negative value, the scheduler stores the returned value and the elevator that returned that value. When the scheduler has asked all elevators for its absolute position relative the floor of the request, the elevators are sorted according to which was the closest to the floor of the request. Then the scheduler takes the closest elevator and tries to schedule the request to that elevator. This involves asking the elevator for it absolute position
-again to assure that the elevator is still able to handle the request in case that elevator has moved since the scheduler asked it the first time. If the elevator cannot handle the request any longer, the next possible elevator is tried and so on.
+In the case the elevator does not return a negative value, the scheduler stores the returned value and the elevator that returned that value. When the scheduler has asked all elevators for its absolute position relative the floor of the request, the elevators are sorted according to which was the closest to the floor of the request. Then the scheduler takes the closest elevator and tries to schedule the request to that elevator. This involves asking the elevator for its absolute position
+again to assure that the elevator is still able to handle the request in case that elevator has moved since the scheduler asked it the first time. If the elevator cannot handle the request any longer, the next possible elevator is tried and so forth.
 
 If no elevator is able to handle the request to begin with, or if that is the case after checking all the elevators again, the request is added to a FIFO queue of commands that has not been scheduled that the elevators takes requests from regularly. The elevators also make sure to take the first request in the queue in case the elevator turn idle in order to guarantee that every request will eventually be handled.
 
 \section{Handling commands}
+\label{sec:commands}
 
-\section{Testing and evaluation}
+\section{Evaluation}
+\label{sec:eval}
+The implementation of the controller for the elevators are evaluated on mainly four different aspects. These aspects are time travelling inside the elevator, time waiting for the elevator, if it is fair or not and finally power consumption.
+
+These aspects has to be weighted against each other because there is no way of achieving a perfect solution in every aspect. An example of this is when there are one person wanting to go from floor two to floor 4 and one person wanting to go from floor three to five. To minimize traveling time for both persons they would have to be handled separately, this would make the time waiting for an elevator to arrive significantly longer if there are only one available elevator. This means that there are no optimal solution to the scheduling problem without weighting the different measuring aspects.
+
+The solution should always be fair regardless of the weighting used. A fair solution does not allow for starvation to happen. There is no way of starvation in the implementation in this project. This is because every command will be handled. Once an elevator cabin reaches an end point in the scheduled direction the elevator monitor will try to schedule an unfitted command before going idle and accepting new commands.
+
+The implementation in this project tries to minimize the time traveling, the time waiting for an elevator as well as power consumption by always checking the nearest valid cabin by the algorithm described in section \ref{sec:scheduling}. This implementation does not perform the optimal way in aspect but provide a fair trade-off.
 
 \section{Conclusion}
+\label{sec:conclusion}
 \end{document}
