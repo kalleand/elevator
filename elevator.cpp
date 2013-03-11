@@ -374,7 +374,6 @@ void elevator::run_elevator()
             command * cmd = _sched_monitor->get_first_command_not_fitted();
             if(cmd != nullptr)
             {
-                std::cout << "Getting unscheduled command" << std::endl;
                 handle_command(*cmd);
                 std::vector<command *> more_commands = _sched_monitor->get_more_unfitted_commands(_scale / elevator::TICK, cmd);
                 for (auto it = more_commands.begin(), end = more_commands.end(); it != end; ++it)
@@ -421,17 +420,6 @@ void elevator::handle_command(command cmd)
          */
         if(_extreme_direction == MotorStop)
         {
-            /*
-             * Update the direction that this elevator now will go.
-             */
-            if((double) cmd.desc.fbp.floor > _position + elevator::EPSILON)
-            {
-                _direction = MotorUp;
-            }
-            else if((double) cmd.desc.fbp.floor < _position - elevator::EPSILON)
-            {
-                _direction = MotorDown;
-            }
             /*
              * Update the direction that this elevator is meant to go when the elevator
              * has reached the target of this command.
@@ -606,7 +594,6 @@ void elevator::handle_command(command cmd)
             {
                 if(p.second == FloorButton)
                 {
-                    std::cout << _extreme_direction << std::endl;
                     FloorButtonPressDesc tmp_fbpd = {p.first, (_extreme_direction == MotorUp) ? GoingUp : GoingDown};
                     EventDesc tmp_event = {tmp_fbpd};
                     _sched_monitor->add_command_not_possible_to_schedule(command(p.second, tmp_event));
