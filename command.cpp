@@ -29,3 +29,19 @@ command & command::operator=(command && source)
     desc = source.desc;
     return *this;
 }
+
+bool command::operator ==(const command & other) const
+{
+    if (type == other.type)
+    {
+        if (type == FloorButton)
+        {
+            return desc.fbp.floor == other.desc.fbp.floor && desc.fbp.type == other.desc.fbp.type;
+        }
+        else if (type == CabinButton)
+        {
+            return desc.cbp.cabin == other.desc.cbp.cabin && desc.cbp.floor == other.desc.cbp.floor;
+        }
+    }
+    return false;
+}
