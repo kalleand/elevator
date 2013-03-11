@@ -108,8 +108,8 @@ class elevator
          */
         int _direction;
         /*
-         * _extreme_direction describes which MotorAction the elevator will do until
-         * it has reached its highest or lowest assigned target floor.
+         * _extreme_direction describes which MotorAction the elevator is scheduled to
+         * perform.
          */
         int _extreme_direction;
         /*
@@ -145,5 +145,4 @@ class elevator
          */
         double _time;
 };
-
 #endif
