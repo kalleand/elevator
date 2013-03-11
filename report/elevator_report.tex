@@ -57,6 +57,14 @@ If no elevator is able to handle the request to begin with, or if that is the ca
 
 \section{Handling commands}
 
+Each elevator has two functions for handling new commands, one for handling position update commands and one for handling button presses either inside or outside the elevator.
+
+The function for handling position updates is the function where the elevator detects if it has reached a new floor. If that floor was the target floor of the elevator, the elevator is stopped and the doors are opened. This function is also responsible keeping track of how the opening and closing of the doors is progressing.
+
+The function for handling button presses is the function that is responsible for ordering the target floors of the elevator when it receives a new button press so that the elevator will go to each target floor in an appropriate order according the direction the elevator has to go in order to serve the target floors it have. Mainly this means that the elevator e.g. will ignore button presses to go down to a floor below its current position in case the elevator is moving upwards.
+
+When the elevator is handling a new button press, it also tries to get requests that have not been possible to schedule to any elevator yet so that no request will be ignored forever.
+
 \section{Testing and evaluation}
 
 \section{Conclusion}
