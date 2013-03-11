@@ -4,13 +4,13 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{amssymb}
+\usepackage{graphicx}
 \author{Karl Johan Andreasson \and Josef Sunesson}
 \title{Green Elevator}
 \begin{document}
 \maketitle
 
-\begin{abstract}
-%TODO 
+\begin{abstract} 
 This report handles the implementation of the Green Elevator project in the course Concurrent Programming. The developed controller handles OK.
 \end{abstract}
 
@@ -30,9 +30,25 @@ The implementation of the elevator controller uses several threads running simul
 
 The threads communicate through monitors and it also through monitors that synchronization is achieved. The choice of monitors was made because of the abstraction it provides. In the implementation there are several monitors present. One for handling jobs that are to be scheduled, one to handle the communication between the controller and the elevators and one for each elevator car. The need of a monitor for communication between the controller and the elevators is because of the choice of implementing the controller in C++ the communication is performed over TCP to the elevators. This forces the communication to be performed serialized and this is performed using a monitor.
 
+\begin{figure}[!h]
+\centering
+\includegraphics[scale=0.5]{state_transition.png}
+\caption{State transitions of an elevator.}
+\label{fig:states}
+\end{figure}
+
+The elevator is considered as a state machine in the implementation. The states the elevator can have is Idle, Moving, OpeningDoor, ClosingDoor, OpenDoor and EmergencyStop. The state transitions can be found in figure \ref{fig:states}.
+
+A command in the implementation is a button press either inside one of the elevators or on a floor. The command will be read by the reading thread and passed on to the appropriate vector. This vector is either a vector for elevator specific commands for a specific elevator or a vector inside the scheduling monitor for unscheduled commands.
+
+Every handler for the elevators will loop through a while loop until it is signaled by the main thread that the execution is over. Inside the loop it will check for commands to handle inside the elevator specific command vector. These commands are handled inside the monitor associated with the elevator to provide mutual exclusion. Once the commands are handled the elevator invokes a function called run\_elevator inside the elevator monitor, this function will start the elevator if its idle and control close the doors if they are open and the timer has run out. 
+
 \section{Scheduling}
 How to decide which elevator that should be sent to handle the command.
 
 \section{Handling commands}
 
+\section{Testing and evaluation}
+
+\section{Conclusion}
 \end{document}
