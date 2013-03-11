@@ -18,16 +18,16 @@
  *
  * RUNNING:
  *
- * Use the Makefile to run the program aswell. The elevator implementation
+ * Use the Makefile to run the program as well. The elevator implementation
  * is untouched in this program but is expected to be located in the folder
- * for the make rule 'elevator' to work. This make rule will without any
- * specification start three elevators in a six floor building. To run the
- * controller (this program) use the default make rule (which is 'run').
+ * elevator for the make rule 'elevator' to work. This make rule will without
+ * any specification start three elevators in a six floor building. To run
+ * the controller (this program) use the default make rule (which is 'run').
  *
  * To change the number of elevators; define ELEVATORS to be the desired
  * amount of elevators. To change the number of floors; define FLOORS to be
  * the desired amount of floors minus one (this is because you specify the top
- * floor and the floors are zero indexed, first one is called BV = Båttenvåning
+ * floor and the floors are zero indexed, first one is called BV = Bottenvåning
  * and subsequent are called 1,2,3...). These two parameters should be the
  * same for when running the elevator and the controller.
  *
@@ -50,7 +50,7 @@
 #include "commands_to_schedule_monitor.h"
 
 /*
- * Extern variables used by elevator monitors to be able to know the
+ * Global variables used by elevator monitors to be able to know the
  * top floor number.
  */
 int int_floors;
@@ -80,7 +80,7 @@ void * scheduler(void *);
 std::vector<elevator> elevators;
 
 /*
- * Array of vectors holding commands specific to the elevator.
+ * Array of vectors holding commands specific to each elevator.
  * Note here that since the elevator is one indexed one vector
  * will remain untouched.
  */
@@ -94,13 +94,12 @@ std::vector<command> * elevator_specific_updates;
 pthread_mutex_t * elevator_updates_locks;
 
 /*
- * Monitor handling the communication with the hardwareAPI functions that
- * communicate with the elevators.
+ * Monitor handling the communication with the hardwareAPI functions.
  */
 socket_monitor * mon;
 
 /*
- * Monitor that holds the at the time unsicheduled commands.
+ * Monitor that holds the currently unscheduled commands.
  */
 commands_to_schedule_monitor * commands_to_schedule;
 
@@ -124,13 +123,13 @@ bool done = false;
  *
  * The number of worker threads depends on the amount of elevators in
  * the simulation. There are one thread for every elevator. One thread
- * is used for reading input from the elvators and one thread is used
+ * is used for reading input from the elevators and one thread is used
  * for scheduling.
  */
 int main(int argc, char ** argv)
 {
-    /* Reading input arguments given to the program. Unless elevators,
-     * floors, hostname and port is specified we return a print of
+    /* Reading input arguments given to the program. Unless elevators and
+     * floors, and possibly also host name and port, is specified, we return a print of
      * how to run the program. Else we read the arguments and initialization
      * is begun.
      */
@@ -208,7 +207,7 @@ int main(int argc, char ** argv)
     }
 
     /*
-     * Initialize the connection.
+     * Initialize the connection with the hardwareAPI.
      */
     initHW(hostname.c_str(), port);
 
@@ -231,7 +230,7 @@ int main(int argc, char ** argv)
     pthread_create(&threads[number_of_elevators + 1], nullptr, read_thread, nullptr);
 
     /*
-     * To end the simulation printing anything to standard in will signal to the
+     * To end the simulation, printing anything to the standard input will signal to the
      * threads that it is over.
      */
     getchar();
@@ -250,17 +249,20 @@ int main(int argc, char ** argv)
      */
     delete mon;
     delete commands_to_schedule;
+    delete[] elevator_specific_updates;
+    delete[] elevator_updates_locks;
 
     /*
-     * Close down the connection to the elevators and return sucess.
+     * Close down the connection to the elevators and return success.
      */
     terminate();
     return 0;
 }
 
 /*
- * Function used by the thread that reads input from the elevators and passing them on
- * to the appropriate vector of commands. Inspiration to this is taken from test-hwAPI.c.
+ * Function used by the thread that reads input from the elevators in the hardware simulation
+ * and passing them on to the appropriate vector of commands. Inspiration to this is taken
+ * from test-hwAPI.c.
  */
 void * read_thread(void * input)
 {
@@ -277,9 +279,9 @@ void * read_thread(void * input)
      */
     while (!done) {
         /*
-         * Waiting for a command to be passed on to the controller from the elevator.
+         * Waiting for a command to be passed to this controller from the elevator.
          *
-         * Once a command is passed on and waitForEvent returns the type is saved in variable
+         * Once a command is passed on and waitForEvent returns, the type is saved in variable
          * e. This makes it possible to know what to look for in the EventDesc ed.
          */
         e = waitForEvent(&ed);
@@ -287,9 +289,7 @@ void * read_thread(void * input)
         /*
          * Create the command to pass on to the appropriate vector.
          */
-        command tmp;
-        tmp.type=e;
-        tmp.desc=ed;
+        command tmp(e, ed);
 
         /*
          * Branch to the EventType specified in e.
@@ -401,8 +401,10 @@ void * handle_elevator(void * input)
     {
         /*
          * First a check to see if there are any new commands to handle are made.
-         * This check is performed outside without locking because the main reason
-         * the only relevant information is if the vector is empty or not.
+         * This check is performed without locking because the only relevant information
+         * is if the vector is empty or not, and if the listening thread happens to currently
+         * add a command to this elevator, we will get around to that command in the next
+         * iteration anyway.
          */
         if (elevator_specific_updates[elevator_number].size() > 0)
         {
@@ -426,13 +428,13 @@ void * handle_elevator(void * input)
                 /*
                  * Positions are more important to handle straight away. Therefore
                  * the same queue is not used and the command is handled immediately
-                 * once the lock is aqquired inside the monitor.
+                 * once the lock is acquired inside the monitor.
                  */
                 elevators[elevator_number].set_position(cmd.desc.cp.position);
             }
             /*
              * Once the command has been processed it is no longer needed and it is
-             * removed from the vector. After the command has been removed mutual exclusion
+             * removed from the vector. After the command has been removed, mutual exclusion
              * is no longer needed.
              */
             elevator_specific_updates[elevator_number].erase(elevator_specific_updates[elevator_number].begin());
@@ -453,14 +455,15 @@ void * handle_elevator(void * input)
  * Iterates over every elevator and invokes a function in the monitor responsible for this
  * elevator. This method returns with the absolute distance between the floor the button
  * was pressed on and the position of the elevator, or -1 if the elevator is not able to
- * handle the command. Then the elevators are sorted on the distance and the elevators are
- * tried to be scheduled (if they have passed the floor for instance we take the next in the
+ * handle the command. Then the elevators are sorted on the distance and then the command
+ * is given to the first elevator in the list (if that elevator happens to have passed the
+ * floor of the press during the work of the scheduler, we take the next elevator in the
  * vector).
  */
 void * scheduler(void * arguments)
 {
     /*
-     * Loop through the procedure until the main thread signals to this thread that the
+     * Loop until the main thread signals to this thread that the
      * simulation is over. (Done through setting done == true.)
      */
     while (!done)
@@ -474,13 +477,13 @@ void * scheduler(void * arguments)
         command cmd = commands_to_schedule->get_first_new_command();
         /*
          * The only commands that is needed to be scheduled are floor button presses.
-         * Therfore we can call the union desc fbp member. (fbp == floor button press)
+         * Therefore we can call the union desc's fbp member. (fbp == floor button press)
          */
         FloorButtonPressDesc button = cmd.desc.fbp;
         /*
          * The possible elevators are saved in a vector holding pairs with a pointer to the
          * elevator along with the score.
-         * The score is saved as the number of ticks (postion updates away) to avoid the
+         * The score is saved as the number of ticks (position updates away) to avoid the
          * inaccuracy of using doubles.
          */
         std::vector<std::pair<elevator *, int>> possible_elevators;
@@ -533,9 +536,9 @@ void * scheduler(void * arguments)
 
         /*
          * We now want to schedule the event. The best elevator is tried first for scheduling.
-         * The reason we check if the absolute_position_relative again is beacuse if
-         * the elevator passed the destination before it is no longer able to handle the command
-         * and the next elevator in line is tried.
+         * The reason we check if the absolute_position_relative again is because it might happen
+         * that the elevator has passed the destination before reaching this point in and therefore
+         * it is no longer able to handle the command and the next elevator in line is tried.
          */
         for (auto it = possible_elevators.begin(), end = possible_elevators.end(); it != end; ++it)
         {
