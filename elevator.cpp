@@ -528,12 +528,19 @@ void elevator::handle_command(command cmd)
                 {
                     std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
                 }
-                /* TODO
-                 * Fail safe, never happens I think.
+                /*
+                 * Only happens when idle and getting.
                  */
                 else
                 {
-                    std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
+                    if (_extreme_direction == MotorDown)
+                    {
+                        std::sort(_targets.begin(), _targets.end(), compare_pairs_desc);
+                    }
+                    else
+                    {
+                        std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
+                    }
                 }
                 /*
                  * Update the current target and its type to the first in the list of targets.
@@ -715,7 +722,14 @@ void elevator::handle_command(command cmd)
                  */
                 else
                 {
-                    std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
+                    if (_extreme_direction == MotorDown)
+                    {
+                        std::sort(_targets.begin(), _targets.end(), compare_pairs_desc);
+                    }
+                    else
+                    {
+                        std::sort(_targets.begin(), _targets.end(), compare_pairs_asc);
+                    }
                 }
                 /*
                  * Update the current target and its type to the first in the list of targets.
