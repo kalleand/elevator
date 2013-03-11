@@ -1,7 +1,7 @@
 #include "commands_to_schedule_monitor.h"
 
 /*
- * Default constructor that initalize the lock and the conditional
+ * Default constructor that initialize the lock and the conditional
  * variable.
  */
 commands_to_schedule_monitor::commands_to_schedule_monitor()
@@ -19,7 +19,7 @@ commands_to_schedule_monitor::~commands_to_schedule_monitor()
 
 /*
  * Function that returns the command first in the queue of
- * unschduled commands.
+ * unscheduled commands.
  */
 command commands_to_schedule_monitor::get_first_new_command()
 {
@@ -53,8 +53,8 @@ command * commands_to_schedule_monitor::get_first_command_not_fitted()
 {
     pthread_mutex_lock(&_lock);
     /*
-     * Default return value is nullptr and once we find an unschedulable
-     * command we replace the return value with this command.
+     * Default return value is nullptr and if there is any unschedulable
+     * commands, we replace the return value with the first of these command.
      */
     command * ret_cmd = nullptr;
     if (_commands_not_yet_scheduled.size() > 0)
@@ -70,7 +70,7 @@ command * commands_to_schedule_monitor::get_first_command_not_fitted()
  * Function that takes the position of the elevator (in number
  * of ticks above the BV) and the currently active command and
  * returns all other commands deemed not schedulable that can
- * now be handled.
+ * now be handled in conjunction with the active command.
  */
 std::vector<command *> commands_to_schedule_monitor::get_more_unfitted_commands(int position, command * cmd)
 {
@@ -81,8 +81,8 @@ std::vector<command *> commands_to_schedule_monitor::get_more_unfitted_commands(
      */
     std::vector<command *> more_commands;
     /*
-     * We use a normal for-loop because we might want to erase commands from the vector
-     * and this is control of the index is easier to do with this kind of loop.
+     * We use a normal for-loop using only an index variable because we might want
+     * to erase commands from the vector and this is easier to do with this kind of loop.
      *
      * We do not automatically update our index i, but we do it manually when the
      * command was not schedulable.
@@ -100,14 +100,14 @@ std::vector<command *> commands_to_schedule_monitor::get_more_unfitted_commands(
         if (current_cmd.desc.fbp.type == cmd->desc.fbp.type)
         {
             /*
-             * We want to translate the floor to nuber of ticks above BV and compare these.
-             * Checks if we are the desired floor is below the elevator.
+             * We want to translate the floor to number of ticks above BV and compare these.
+             * Checks if the desired floor is below the elevator.
              */
             if ((cmd->desc.fbp.floor / 0.04) < position)
             {
                 /*
                  * If the elevator is going up and the destination of the elevator is above
-                 * the elevator the command is schedulable by this elevator.
+                 * the elevator, the command is schedulable by this elevator.
                  */
                 if (current_cmd.desc.fbp.type == GoingDown && (current_cmd.desc.fbp.floor / 0.04) < position)
                 {
@@ -117,13 +117,13 @@ std::vector<command *> commands_to_schedule_monitor::get_more_unfitted_commands(
                 }
             }
             /*
-             * Checks if we are the desired floor is above the elevator.
+             * Checks if the desired floor is above the elevator.
              */
             else if ((cmd->desc.fbp.floor / 0.04) > position)
             {
                 /*
                  * If the elevator is going down and the destination of the elevator is below
-                 * the elevator the command is schedulable by this elevator.
+                 * the elevator, the command is schedulable by this elevator.
                  */
                 if (current_cmd.desc.fbp.type == GoingUp && (current_cmd.desc.fbp.floor / 0.04) > position)
                 {

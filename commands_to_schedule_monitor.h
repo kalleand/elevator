@@ -28,8 +28,8 @@ class commands_to_schedule_monitor
         command * get_first_command_not_fitted();
 
         /*
-         * Funtion that returns now schedulable commands from the previously
-         * unshcedulable commands.
+         * Function that returns now schedulable commands from the previously
+         * unschedulable commands.
          */
         std::vector<command *> get_more_unfitted_commands(int position, command * cmd);
 
