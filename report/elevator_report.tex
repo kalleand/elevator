@@ -25,11 +25,11 @@ In the elevator scheduling problem there are hard deadlines to meet once a press
 Another very important aspect of the elevator controller is that it has to provide a fair scheduling of the jobs it receives. No starvation of a job is allowed. Starvation could happen if a job gets postponed because there are other jobs that get scheduled to be executed before and if these jobs continue to arrive the original job is suffering from starvation.
 
 \section{Program outline}
-The implementation of the controller of the elevator was made in the language C++ using monitors with locks from the Pthread library for synchronization. C++ was chosen over Java because of the speed increase C++ produces.
+The implementation of the controller of the elevators was made in the language C++ using monitors with locks from the Pthread library for synchronization. C++ was chosen over Java because of the speed increase C++ produces and because both authors prefer to do programming in C++ over Java.
 
-The implementation of the elevator controller uses several threads running simultaneously to minimize the response time of the controller. The threads running are one for every elevator car present, one thread that is reading the commands that are coming from the elevators and then dispatching them to either the scheduler or the thread handling the concerned elevator and one last thread to perform scheduling of the jobs.
+The implementation of the elevator controller uses several threads running simultaneously to minimize the response time of the controller. The threads running are one for every elevator cabin present, one thread that is reading the commands that are coming to the elevators and then dispatching them to either the scheduler or the thread handling the concerned elevator and one last thread to perform scheduling of the jobs.
 
-The threads communicate through monitors and it also through monitors that synchronization is achieved. The choice of monitors was made because of the abstraction it provides. In the implementation there are several monitors present. One monitor for handling jobs that are to be scheduled, one monitor to handle the communication between the controller and the elevators and one for each elevator car. The need of a monitor for communication between the controller and the elevators is because of the choice of implementing the controller in C++ the communication is performed over TCP to the elevators. This forces the communication to be performed serialized and this is performed using a monitor.
+The threads communicate through monitors and it is also through monitors that synchronization is achieved. The choice of monitors was made because of the abstraction it provides. In the implementation there are several monitors present. One monitor for handling jobs that are to be scheduled, one monitor to handle the communication between the hardware elevator controller and the elevators and one for each elevator cabin. The need of a monitor for communication between the hardware elevator controller and the elevators is because of the choice of implementing the controller of the elevators in C++, the communication is performed over TCP to the hardware elevator controller. This forces the communication to be performed serialized and this is performed using a monitor.
 
 \begin{figure}[!h]
 \centering
@@ -38,11 +38,11 @@ The threads communicate through monitors and it also through monitors that synch
 \label{fig:states}
 \end{figure}
 
-The elevator is considered as a state machine in the implementation. The states the elevator can have is Idle, Moving, OpeningDoor, ClosingDoor, OpenDoor and EmergencyStop. The state transitions can be found in figure \ref{fig:states}. When considering the elevators as state machines the scheduling and how elevators handle commands given to them are simplified.
+An elevator is considered as a state machine in the implementation. The states an elevator can have is Idle, Moving, OpeningDoor, ClosingDoor, OpenDoor and EmergencyStop. The state transitions can be found in figure \ref{fig:states}. When considering the elevators as state machines, the scheduling and how elevators handle commands given to them are simplified.
 
 A command in the implementation is a button press either inside one of the elevators or on a floor. The command will be read by the reading thread and passed on to the appropriate vector. This vector is either a vector for elevator specific commands for a specific elevator or a vector inside the scheduling monitor for unscheduled commands.
 
-Every handler for the elevators will loop through a while loop until it is signaled by the main thread that the execution is over. Inside the loop it will check for commands to handle inside the elevator specific command vector. These commands are handled inside the monitor associated with the elevator to provide mutual exclusion. Once the commands are handled the elevator invokes a function called run\_elevator inside the elevator monitor, this function will start the elevator if its idle and close the doors if they are open and the timer has run out.
+Every handler for the elevators will loop through a while loop until it is signaled by the main thread that the execution is over. Inside the loop it will check for commands to handle inside the elevator specific command vector. These commands are handled inside the monitor associated with the elevator to provide mutual exclusion. Once the commands are handled the elevator invokes a function called run\_elevator inside the elevator monitor, this function will start the elevator if its idle and close the doors if they are open and the timer controlling how long the door has been open has run out.
 
 % Once a command is received by an elevator monitor it will try to fit it in its vector of floors it is scheduled to stop at. If it is unable to stop at the floor in the command given the monitor will queue it in the unfitted commands vector in the commands to schedule monitor if it was a floor button and discard the command if it came from inside the elevator cabin. If the command was valid it will try to enter it to the vector of scheduled floors. After it was entered into the vector, the vector is sorted either in ascending order for when the elevator is going upwards or descending order if the elevator is going downwards.
 
@@ -60,6 +60,13 @@ If no elevator is able to handle the request to begin with, or if that is the ca
 
 \section{Handling commands}
 \label{sec:commands}
+Each elevator has two functions for handling new commands, one for handling position update commands and one for handling button presses either inside or outside the elevator.
+
+The function for handling position updates is the function where the elevator detects if it has reached a new floor. If that floor was the target floor of the elevator, the elevator is stopped and the doors are opened. This function is also responsible keeping track of how the opening and closing of the doors is progressing.
+
+The function for handling button presses is the function that is responsible for ordering the target floors of the elevator when it receives a new button press so that the elevator will go to each target floor in an appropriate order according the direction the elevator has to go in order to serve the target floors it have. Mainly this means that the elevator e.g. will ignore button presses to go down to a floor below its current position in case the elevator is moving upwards.
+
+When the elevator is handling a new button press, it also tries to get requests that have not been possible to schedule to any elevator yet so that no request will be ignored forever.
 
 \section{Evaluation}
 \label{sec:eval}
