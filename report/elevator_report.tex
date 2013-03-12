@@ -80,6 +80,13 @@ The solution should always be fair regardless of the weighting used. A fair solu
 
 The implementation in this project tries to minimize the time traveling, the time waiting for an elevator as well as power consumption by always checking the nearest valid cabin by the algorithm described in section \ref{sec:scheduling}. This implementation does not perform the optimal way in any aspect but provide a fair trade-off.
 
-\section{Conclusion}
-\label{sec:conclusion}
+\section{Discussion}
+\label{sec:discussion}
+
+During the implementation of the program the problems encountered were few initially. The communication over TCP with the elevators went smoothly once the hardware API was understood. The main problems occurred when special user cases were found, this resulted in several special if cases in the logic when handling a command. The choice of declaring states of the elevator made the logic easier to understand and develop.
+
+One annoyance during development was the inaccuracy of double precision floating points in the position updates from the elevators. In many cases we solved this by locally transforming the positions to integer value representation of the number of updates above the ground level. Maybe the elevators could represent its position using this format from the beginning. That would make the implementation easier without sacrificing any of the more relevant and concurrent parts of the project.
+
+In the end we learned a great deal about parallel programming in a larger project. The choice of implementing synchronization through monitors made the synchronization code easy and clean.
+
 \end{document}
