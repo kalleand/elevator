@@ -624,11 +624,11 @@ void elevator::handle_command(command cmd)
              * according to the direction the elevator has to go to reach the target
              * floor of this command.
              */
-            if((double) cmd.desc.cbp.floor > _position + elevator::EPSILON)
+            if(cmd.desc.cbp.floor > _scale)
             {
                 _extreme_direction = MotorUp;
             }
-            else if((double) cmd.desc.cbp.floor < _position - elevator::EPSILON)
+            else if(cmd.desc.cbp.floor < _scale)
             {
                 _extreme_direction = MotorDown;
             }
