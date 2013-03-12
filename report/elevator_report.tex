@@ -11,7 +11,7 @@
 \maketitle
 
 \begin{abstract}
-This report gives a description of our implementation of an elevator controller responsible for handling one or more elevators present in a fictional building. The implementation was done as the final project in the course Concurrent Programming.
+This report gives a description of an implementation of an elevator controller responsible for handling one or more elevators present in a fictional building. The implementation was done as the final project in the course Concurrent Programming.
 
 In the controller, we try achieve a good balance between waiting time and traveling time.
 \end{abstract}
@@ -72,13 +72,13 @@ When the elevator is handling a new button press, it also tries to get requests 
 
 \section{Evaluation}
 \label{sec:eval}
-The implementation of the controller for the elevators are evaluated on mainly four different aspects. These aspects are time travelling inside the elevator, time waiting for the elevator, if it is fair or not and finally power consumption.
+The implementation of the controller for the elevators are evaluated on mainly four different aspects. These aspects are time traveling inside the elevator, time waiting for the elevator, if it is fair or not, and finally power consumption.
 
-These aspects has to be weighted against each other because there is no way of achieving a perfect solution in every aspect. An example of this is when there are one person wanting to go from floor two to floor 4 and one person wanting to go from floor three to five. To minimize traveling time for both persons they would have to be handled separately, this would make the time waiting for an elevator to arrive significantly longer if there are only one available elevator. This means that there are no optimal solution to the scheduling problem without weighting the different measuring aspects.
+These aspects has to be weighted against each other because there is no way of achieving a perfect solution in every aspect. An example of this is when there are one person wanting to go from floor two to floor four and one person wanting to go from floor three to five. To minimize traveling time for both persons they would have to be handled separately, this would make the time waiting for an elevator to arrive significantly longer if there are only one available elevator. This means that there are no optimal solution to the scheduling problem without weighting the different measuring aspects.
 
 The solution should always be fair regardless of the weighting used. A fair solution does not allow for starvation to happen. There is no way of starvation in the implementation in this project. This is because every command will be handled. Once an elevator cabin reaches an end point in the scheduled direction the elevator monitor will try to schedule an unfitted command before going idle and accepting new commands.
 
-The implementation in this project tries to minimize the time traveling, the time waiting for an elevator as well as power consumption by always checking the nearest valid cabin by the algorithm described in section \ref{sec:scheduling}. This implementation does not perform the optimal way in aspect but provide a fair trade-off.
+The implementation in this project tries to minimize the time traveling, the time waiting for an elevator as well as power consumption by always checking the nearest valid cabin by the algorithm described in section \ref{sec:scheduling}. This implementation does not perform the optimal way in any aspect but provide a fair trade-off.
 
 \section{Conclusion}
 \label{sec:conclusion}
